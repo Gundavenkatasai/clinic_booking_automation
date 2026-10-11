@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: aura-clinic-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build -w @clinic/shared && npm run build -w @clinic/api
+    startCommand: npm run start -w @clinic/api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: CLINIC_TIMEZONE
+        value: Asia/Kolkata
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin@auraclinic.com
+      - key: ADMIN_PASSWORD
+        value: AuraClinicAdmin2026!
+      - key: GOOGLE_SHEETS_DOCUMENT_NAME
+        value: "Clinic Booking Database"
+      - key: GOOGLE_CALENDAR_NAME
+        value: "Clinic Appointments"
