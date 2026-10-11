@@ -1,0 +1,27 @@
+{
+  "name": "clinic-appointment-booking-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Complete full-stack clinic appointment booking platform with React patient website, admin dashboard, Express backend, and n8n/Google Sheets integration.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"api,patient,admin\" -c \"cyan,green,yellow\" \"npm run dev:api\" \"npm run dev:patient\" \"npm run dev:admin\"",
+    "dev:api": "npm run dev -w @clinic/api",
+    "dev:patient": "npm run dev -w @clinic/patient-web",
+    "dev:admin": "npm run dev -w @clinic/admin-web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "start": "npm run start -w @clinic/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true
+  }
+}

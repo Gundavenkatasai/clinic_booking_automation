@@ -1,0 +1,310 @@
+/* ==========================================================================
+   AURA HEALTH CLINIC - OPERATIONS CONSOLE (ADMIN) DESIGN SYSTEM
+   Aesthetic: Deep slate navigation, high information density, operational clarity
+   ========================================================================== */
+
+:root {
+  /* Color Tokens */
+  --admin-sidebar-bg: #0F172A;
+  --admin-sidebar-hover: #1E293B;
+  --admin-sidebar-active: #334155;
+  --admin-sidebar-text: #E2E8F0;
+  --admin-sidebar-text-muted: #94A3B8;
+
+  --admin-canvas-bg: #F8FAFC;
+  --admin-surface: #FFFFFF;
+  --admin-surface-muted: #F1F5F9;
+
+  --admin-text-main: #0F172A;
+  --admin-text-muted: #64748B;
+  --admin-text-light: #94A3B8;
+
+  --admin-border: #E2E8F0;
+  --admin-border-focus: #0D9488;
+
+  --admin-primary: #0D9488;
+  --admin-primary-hover: #0F766E;
+  
+  --admin-confirmed: #10B981;
+  --admin-confirmed-bg: #ECFDF5;
+  --admin-confirmed-border: #A7F3D0;
+
+  --admin-pending: #F59E0B;
+  --admin-pending-bg: #FFFBEB;
+  --admin-pending-border: #FDE68A;
+
+  --admin-cancelled: #EF4444;
+  --admin-cancelled-bg: #FEF2F2;
+  --admin-cancelled-border: #FECACA;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--admin-canvas-bg);
+  color: var(--admin-text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Layout */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background-color: var(--admin-sidebar-bg);
+  color: var(--admin-sidebar-text);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid #1E293B;
+}
+
+.admin-main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-topbar {
+  height: 64px;
+  background-color: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+}
+
+.admin-content {
+  padding: 2rem;
+  flex-grow: 1;
+}
+
+/* Navigation */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--admin-sidebar-text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  margin: 0.2rem 0.75rem;
+  transition: all 150ms;
+}
+
+.sidebar-link:hover {
+  background-color: var(--admin-sidebar-hover);
+  color: #FFFFFF;
+}
+
+.sidebar-link.active {
+  background-color: var(--admin-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* Operational Tables */
+.admin-table-container {
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.admin-table th {
+  background-color: #F8FAFC;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  border-bottom: 1px solid var(--admin-border);
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--admin-border);
+  vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+  background-color: #F8FAFC;
+}
+
+/* Status Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-confirmed {
+  background-color: var(--admin-confirmed-bg);
+  color: #065F46;
+  border: 1px solid var(--admin-confirmed-border);
+}
+
+.status-rescheduled {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+}
+
+.status-pending {
+  background-color: var(--admin-pending-bg);
+  color: #92400E;
+  border: 1px solid var(--admin-pending-border);
+}
+
+.status-cancelled {
+  background-color: var(--admin-cancelled-bg);
+  color: #991B1B;
+  border: 1px solid var(--admin-cancelled-border);
+}
+
+/* Cards & Metrics */
+.metric-card {
+  background-color: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--admin-text-main);
+  line-height: 1.1;
+  margin: 0.5rem 0 0.25rem;
+}
+
+/* Buttons */
+.btn-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 150ms;
+}
+
+.btn-admin-primary {
+  background-color: var(--admin-primary);
+  color: #FFFFFF;
+}
+
+.btn-admin-primary:hover {
+  background-color: var(--admin-primary-hover);
+}
+
+.btn-admin-secondary {
+  background-color: #FFFFFF;
+  color: var(--admin-text-main);
+  border-color: var(--admin-border);
+}
+
+.btn-admin-secondary:hover {
+  background-color: #F8FAFC;
+}
+
+.btn-admin-danger {
+  background-color: var(--admin-cancelled);
+  color: #FFFFFF;
+}
+
+.btn-admin-danger:hover {
+  background-color: #DC2626;
+}
+
+/* Modals */
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+}
+
+.admin-modal-panel {
+  background-color: #FFFFFF;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-width: 560px;
+  width: 100%;
+  padding: 2rem;
+}
+
+/* Form Controls */
+.admin-input, .admin-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+  background-color: #FFFFFF;
+  color: var(--admin-text-main);
+}
+
+.admin-input:focus, .admin-select:focus {
+  outline: none;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
+}
+
+/* Mono code styling */
+.code-ref {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background-color: #F1F5F9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  color: #334155;
+}

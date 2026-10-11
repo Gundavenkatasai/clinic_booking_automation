@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & Local Secrets (Preserve .env.example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs & Temporary Data
+*.log
+data/
+**/data/*.json
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Vitest / Coverage
+coverage/
