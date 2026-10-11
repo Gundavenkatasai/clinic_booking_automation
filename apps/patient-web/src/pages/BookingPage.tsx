@@ -57,11 +57,12 @@ export const BookingPage: React.FC = () => {
     api
       .getDoctors()
       .then((data) => {
-        setDoctors(data);
+        const validDocs = Array.isArray(data) ? data : [];
+        setDoctors(validDocs);
         setLoadingDoctors(false);
         // Preselect if query param provided
         if (preselectedDoctorId) {
-          const match = data.find((d) => d.doctorId === preselectedDoctorId);
+          const match = validDocs.find((d) => d.doctorId === preselectedDoctorId);
           if (match) {
             setSelectedDoctor(match);
             setCurrentStep(2);
@@ -70,6 +71,7 @@ export const BookingPage: React.FC = () => {
       })
       .catch((err) => {
         setDoctorsError(err.message);
+        setDoctors([]);
         setLoadingDoctors(false);
       });
 

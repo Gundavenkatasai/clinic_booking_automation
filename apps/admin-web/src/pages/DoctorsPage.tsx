@@ -36,9 +36,10 @@ export const DoctorsPage: React.FC = () => {
     setError(null);
     try {
       const data = await adminApi.getDoctors();
-      setDoctors(data);
+      setDoctors(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch doctor records');
+      setDoctors([]);
     } finally {
       setLoading(false);
     }

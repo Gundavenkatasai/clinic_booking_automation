@@ -26,11 +26,12 @@ export const HomePage: React.FC = () => {
     api
       .getDoctors()
       .then((data) => {
-        setDoctors(data);
+        setDoctors(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
+        setDoctors([]);
         setLoading(false);
       });
   }, []);
@@ -231,7 +232,7 @@ export const HomePage: React.FC = () => {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-              {doctors.slice(0, 4).map((doc) => (
+              {(doctors || []).slice(0, 4).map((doc) => (
                 <div key={doc.doctorId} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                     <div>

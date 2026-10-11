@@ -8,7 +8,7 @@ import {
   RescheduleBookingInput,
 } from '@clinic/shared';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
@@ -20,7 +20,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     },
   });
 
-  const data = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Expected JSON response from ${url}, but received ${contentType || 'HTML/Text'}. Please ensure API server is running on port 5000.`);
+  }
+
+  const data = await response.json();
 
   if (!response.ok) {
     const errorMsg = data?.error?.message || `Request failed with status ${response.status}`;
@@ -31,7 +36,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw err;
   }
 
-  return data.data as T;
+  if (data && typeof data === 'object' && 'data' in data && data.data !== undefined) {
+    return data.data as T;
+  }
+  return data as T;
 }
 
 export const api = {

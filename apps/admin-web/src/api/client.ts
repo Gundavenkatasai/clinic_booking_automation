@@ -9,7 +9,7 @@ import {
   UpdateDoctorInput,
 } from '@clinic/shared';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 function getToken(): string | null {
   return sessionStorage.getItem('admin_token');
@@ -31,7 +31,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
-  const data = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Expected JSON response from ${API_BASE}${endpoint}, but received ${contentType || 'non-JSON'}.`);
+  }
+
+  const data = await response.json();
 
   if (!response.ok) {
     const errorMsg = data?.error?.message || `Request failed with status ${response.status}`;
@@ -41,7 +46,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw err;
   }
 
-  return data.data as T;
+  if (data && typeof data === 'object' && 'data' in data && data.data !== undefined) {
+    return data.data as T;
+  }
+  return data as T;
 }
 
 export interface PaginatedAppointments {

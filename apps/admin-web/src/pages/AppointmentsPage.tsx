@@ -55,6 +55,7 @@ export const AppointmentsPage: React.FC = () => {
       setData(res);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch appointments');
+      setData(null);
     } finally {
       setLoading(false);
     }

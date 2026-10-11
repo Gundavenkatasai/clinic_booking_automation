@@ -13,9 +13,10 @@ export const AuditLogsPage: React.FC = () => {
     setError(null);
     try {
       const data = await adminApi.getAuditLogs(100);
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch audit log trail');
+      setLogs([]);
     } finally {
       setLoading(false);
     }

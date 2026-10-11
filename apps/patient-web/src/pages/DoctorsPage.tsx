@@ -14,16 +14,17 @@ export const DoctorsPage: React.FC = () => {
     api
       .getDoctors()
       .then((data) => {
-        setDoctors(data);
+        setDoctors(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
+        setDoctors([]);
         setLoading(false);
       });
   }, []);
 
-  const filteredDoctors = doctors.filter((doc) => {
+  const filteredDoctors = (doctors || []).filter((doc) => {
     const q = search.toLowerCase();
     return (
       doc.doctorName.toLowerCase().includes(q) ||
