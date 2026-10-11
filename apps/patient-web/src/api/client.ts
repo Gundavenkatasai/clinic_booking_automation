@@ -8,7 +8,8 @@ import {
   RescheduleBookingInput,
 } from '@clinic/shared';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const rawBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
