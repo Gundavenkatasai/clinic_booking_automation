@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build -w @clinic/shared && npm run build -w @clinic/api
+    buildCommand: npm install --include=dev && npm run build -w @clinic/shared && npm run build -w @clinic/api
     startCommand: npm run start -w @clinic/api
     healthCheckPath: /api/health
     envVars:

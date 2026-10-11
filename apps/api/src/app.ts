@@ -1,4 +1,4 @@
-import express, { Express } from 'express';
+import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -25,7 +25,7 @@ export function createApp(): Express {
 
   app.use(
     cors({
-      origin: (origin, callback) => {
+      origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (e.g. mobile apps, curl, postman, server-to-server)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) {
@@ -50,7 +50,7 @@ export function createApp(): Express {
   app.use('/api', routes);
 
   // 404 Handler for unmatched routes
-  app.use((req, res) => {
+  app.use((req: Request, res: Response) => {
     res.status(404).json({
       success: false,
       error: {
