@@ -56,6 +56,4 @@ services:
       - key: N8N_ENCRYPTION_KEY
         generateValue: true
       - key: DB_TYPE
-        sync: false
-      - key: DB_POSTGRESDB_CONNECTION_STRING
-        sync: false
+        value: sqlite
