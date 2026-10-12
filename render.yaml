@@ -29,11 +29,11 @@ services:
       - key: ADMIN_APP_ORIGIN
         value: https://aura-clinic-admin-one.vercel.app
       - key: N8N_BOOKING_WEBHOOK_URL
-        value: https://father-samples-leon-associates.trycloudflare.com/webhook/clinic-booking
+        value: https://aura-clinic-n8n.onrender.com/webhook/clinic-booking
       - key: N8N_CANCELLATION_WEBHOOK_URL
-        value: https://father-samples-leon-associates.trycloudflare.com/webhook/clinic-cancel
+        value: https://aura-clinic-n8n.onrender.com/webhook/clinic-cancel
       - key: N8N_RESCHEDULE_WEBHOOK_URL
-        value: https://father-samples-leon-associates.trycloudflare.com/webhook/clinic-reschedule
+        value: https://aura-clinic-n8n.onrender.com/webhook/clinic-reschedule
 
   - type: web
     name: aura-clinic-n8n
@@ -52,7 +52,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: WEBHOOK_URL
-        sync: false
+        value: https://aura-clinic-n8n.onrender.com/
       - key: N8N_ENCRYPTION_KEY
         generateValue: true
       - key: DB_TYPE
