@@ -10,7 +10,7 @@ export const Navbar: React.FC = () => {
     { label: 'Home', path: '/' },
     { label: 'Specialists', path: '/doctors' },
     { label: 'Services', path: '/services' },
-    { label: 'Manage Visit', path: '/manage' },
+    { label: 'Manage / Cancel Visit', path: '/manage' },
     { label: 'Contact', path: '/contact' },
   ];
 

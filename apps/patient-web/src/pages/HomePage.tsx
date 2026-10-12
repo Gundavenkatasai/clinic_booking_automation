@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -13,12 +13,17 @@ import {
   CalendarCheck,
   MailCheck,
   AlertCircle,
+  Search,
+  CalendarDays,
+  XCircle,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { Doctor } from '@clinic/shared';
 
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [quickLookupId, setQuickLookupId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,7 +120,10 @@ export const HomePage: React.FC = () => {
               <Link to="/book" className="btn btn-primary" style={{ padding: '0.875rem 1.75rem', fontSize: '1rem' }} id="hero-book-btn">
                 <Calendar size={18} /> Book Your Appointment
               </Link>
-              <Link to="/doctors" className="btn btn-secondary" style={{ padding: '0.875rem 1.5rem', fontSize: '1rem' }}>
+              <Link to="/manage" className="btn btn-secondary" style={{ padding: '0.875rem 1.5rem', fontSize: '1rem' }} id="hero-manage-btn">
+                <CalendarDays size={18} color="var(--color-primary)" /> Manage / Reschedule Visit
+              </Link>
+              <Link to="/doctors" style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: '0.9375rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                 Meet Our Specialists <ArrowRight size={16} />
               </Link>
             </div>
@@ -174,6 +182,64 @@ export const HomePage: React.FC = () => {
                 Select a Specialist & Slot
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* QUICK LOOKUP & MANAGE APPOINTMENT SECTION */}
+      <section style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid var(--color-border)', padding: '3.5rem 0' }}>
+        <div className="container" style={{ maxWidth: '820px', textAlign: 'center' }}>
+          <span className="badge badge-sage" style={{ marginBottom: '0.75rem' }}>
+            Patient Self-Service Portal
+          </span>
+          <h2 style={{ fontSize: '2rem', marginBottom: '0.75rem', color: 'var(--color-text-main)' }}>
+            Already Have an Appointment?
+          </h2>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', marginBottom: '2rem', maxWidth: '580px', margin: '0 auto 2rem' }}>
+            Look up your booking anytime to view confirmed details, choose a new consultation slot, or cancel your visit online.
+          </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (quickLookupId.trim()) {
+                navigate(`/manage?bookingId=${encodeURIComponent(quickLookupId.trim())}`);
+              } else {
+                navigate('/manage');
+              }
+            }}
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+              justifyContent: 'center',
+              backgroundColor: '#FFFFFF',
+              padding: '0.75rem',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Enter Booking Reference ID (e.g. APT-XXXXXX-XXXX)"
+              value={quickLookupId}
+              onChange={(e) => setQuickLookupId(e.target.value)}
+              className="form-input"
+              style={{ flex: '1 1 300px', minWidth: '240px' }}
+            />
+            <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
+              <Search size={16} /> Look Up & Manage
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1.25rem', fontSize: '0.875rem', color: 'var(--color-text-muted)', flexWrap: 'wrap' }}>
+            <Link to="/manage" style={{ color: 'var(--color-primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <CalendarDays size={15} /> Reschedule Appointment
+            </Link>
+            <Link to="/manage" style={{ color: '#DC2626', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <XCircle size={15} /> Cancel Appointment
+            </Link>
           </div>
         </div>
       </section>
