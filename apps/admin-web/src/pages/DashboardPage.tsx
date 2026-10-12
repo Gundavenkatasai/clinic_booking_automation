@@ -18,6 +18,7 @@ import { DashboardMetrics } from '@clinic/shared';
 export const DashboardPage: React.FC = () => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [todayAppointments, setTodayAppointments] = useState<PaginatedAppointments | null>(null);
+  const [isShowingUpcoming, setIsShowingUpcoming] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,11 +27,21 @@ export const DashboardPage: React.FC = () => {
     setError(null);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
-      const [metricsData, appData] = await Promise.all([
-        adminApi.getDashboard(),
-        adminApi.getAppointments({ dateFrom: todayStr, dateTo: todayStr, limit: 10 }),
-      ]);
+      const metricsData = await adminApi.getDashboard();
       setMetrics(metricsData);
+
+      let appData = await adminApi.getAppointments({ dateFrom: todayStr, dateTo: todayStr, limit: 10 });
+      if (!appData.items || appData.items.length === 0) {
+        const upcomingData = await adminApi.getAppointments({ limit: 10, sortBy: 'appointmentDate', sortOrder: 'asc' });
+        if (upcomingData.items && upcomingData.items.length > 0) {
+          appData = upcomingData;
+          setIsShowingUpcoming(true);
+        } else {
+          setIsShowingUpcoming(false);
+        }
+      } else {
+        setIsShowingUpcoming(false);
+      }
       setTodayAppointments(appData);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch dashboard metrics');
@@ -154,10 +165,12 @@ export const DashboardPage: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--admin-text-main)' }}>
-              Today's Consultation Schedule
+              {isShowingUpcoming ? 'Upcoming Consultation Schedule' : "Today's Consultation Schedule"}
             </h2>
             <p style={{ fontSize: '0.8125rem', color: 'var(--admin-text-muted)' }}>
-              Patient appointments scheduled for today ({new Date().toISOString().split('T')[0]})
+              {isShowingUpcoming
+                ? 'Showing upcoming patient appointments (switch to full log to filter by custom dates)'
+                : `Patient appointments scheduled for today (${new Date().toISOString().split('T')[0]})`}
             </p>
           </div>
 
@@ -168,7 +181,7 @@ export const DashboardPage: React.FC = () => {
 
         {todayAppointments && todayAppointments.items.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--admin-text-muted)', fontSize: '0.875rem' }}>
-            No appointments scheduled for today yet. Use the patient portal to book or test.
+            No appointments scheduled yet. Use the patient portal to book or test.
           </div>
         ) : (
           <div className="admin-table-container">
@@ -178,7 +191,7 @@ export const DashboardPage: React.FC = () => {
                   <th>Booking Ref</th>
                   <th>Patient</th>
                   <th>Doctor ID</th>
-                  <th>Time (IST)</th>
+                  <th>Date & Time (IST)</th>
                   <th>Status</th>
                   <th>Email Status</th>
                 </tr>
@@ -199,7 +212,8 @@ export const DashboardPage: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <strong>{app.appointmentTime}</strong> – {app.endTime}
+                      <div><strong>{app.appointmentDate}</strong></div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-muted)' }}>{app.appointmentTime} – {app.endTime}</div>
                     </td>
                     <td>
                       <span className={`status-pill status-${app.status}`}>
