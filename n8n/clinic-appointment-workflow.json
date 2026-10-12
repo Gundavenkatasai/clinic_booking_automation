@@ -1,0 +1,2368 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic-booking",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -224,
+        -128
+      ],
+      "id": "b6ddc92c-c5fd-46bb-b39e-d4c6a50a9614",
+      "name": "Receive Clinic Booking",
+      "webhookId": "e4bb0413-7dfb-4d7e-b259-78336bcf90bf"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5a529147-14c2-47f3-8517-970fac101603",
+              "leftValue": "={{ $json.body.patientName }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3e2f35e9-fff8-42da-9e14-4474c22c9369",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "f12fc295-55b8-4a5e-aeaa-e5523e8fe5dc",
+              "leftValue": "={{ $json.body.phone }}",
+              "rightValue": "^\\+[1-9]\\d{7,14}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "511d7ea9-d1cb-4357-9eb3-a3e8ee8d8224",
+              "leftValue": "={{ $json.body.doctorId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "a389f837-ea73-4e38-a221-b075a978304e",
+              "leftValue": "={{ $json.body.appointmentDate }}",
+              "rightValue": "^\\d{4}-\\d{2}-\\d{2}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "c07bab2d-80ae-4043-aa8a-e861308f8405",
+              "leftValue": "={{ $json.body.appointmentTime }}",
+              "rightValue": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "3fecc04a-caad-40a6-9abe-0efd74e22874",
+              "leftValue": "={{ $json.body.consent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        -128
+      ],
+      "id": "aa2a69f2-2f9b-4899-ae0c-cf851423bcf7",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"Invalid booking details. Please check all required fields and try again.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        48,
+        16
+      ],
+      "id": "247d0027-b949-4904-8bad-8618a261ec00",
+      "name": "Return Validation Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst booking = $('Receive Clinic Booking').first().json.body;\nconst doctor = $('Find Selected Doctor').first().json;\n\nconst date = booking.appointmentDate;\nconst time = booking.appointmentTime;\n\nconst duration = Number(doctor.durationMinutes);\nconst opening = String(doctor.openingTime).slice(0, 5);\nconst closing = String(doctor.closingTime).slice(0, 5);\n\nconst pad = n => String(n).padStart(2, '0');\n\nif (!date || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {\n  throw new Error('Invalid appointment date');\n}\n\nif (!time || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)) {\n  throw new Error('Invalid appointment time');\n}\n\nif (!Number.isInteger(duration) || duration <= 0) {\n  throw new Error('Invalid doctor appointment duration');\n}\n\nif (doctor.active === false ||\n    String(doctor.active).toUpperCase() === 'FALSE') {\n  throw new Error('Doctor is inactive');\n}\n\nconst start = new Date(`${date}T${time}:00+05:30`);\n\nif (\n  Number.isNaN(start.getTime()) ||\n  start.toISOString().slice(0, 10) !== date\n) {\n  throw new Error('Invalid calendar date');\n}\n\nconst end = new Date(start.getTime() + duration * 60000);\n\nconst startMinutes =\n  Number(time.slice(0, 2)) * 60 +\n  Number(time.slice(3, 5));\n\nconst endMinutes = startMinutes + duration;\n\nconst openingMinutes =\n  Number(opening.slice(0, 2)) * 60 +\n  Number(opening.slice(3, 5));\n\nconst closingMinutes =\n  Number(closing.slice(0, 2)) * 60 +\n  Number(closing.slice(3, 5));\n\nif (\n  !Number.isFinite(openingMinutes) ||\n  !Number.isFinite(closingMinutes) ||\n  openingMinutes >= closingMinutes\n) {\n  throw new Error('Invalid doctor working hours');\n}\n\nif (\n  startMinutes < openingMinutes ||\n  endMinutes > closingMinutes\n) {\n  return [{\n    json: {\n      ...booking,\n      doctorName: doctor.doctorName,\n      availableHours: false,\n      message: 'Appointment is outside the doctor working hours'\n    }\n  }];\n}\n\nconst requestedDay = new Date(\n  `${date}T12:00:00+05:30`\n).toLocaleDateString('en-US', {\n  weekday: 'long',\n  timeZone: 'Asia/Kolkata'\n});\n\nconst workingDays = String(doctor.workingDays)\n  .split(',')\n  .map(d => d.trim());\n\nif (!workingDays.includes(requestedDay)) {\n  return [{\n    json: {\n      ...booking,\n      doctorName: doctor.doctorName,\n      availableHours: false,\n      message: 'Doctor does not work on this day'\n    }\n  }];\n}\n\nif (start.getTime() <= Date.now()) {\n  return [{\n    json: {\n      ...booking,\n      doctorName: doctor.doctorName,\n      availableHours: false,\n      message: 'Appointment must be in the future'\n    }\n  }];\n}\n\nconst endLocal = new Date(end.getTime() + 330 * 60000);\n\nconst appointmentEndDate =\n  `${endLocal.getUTCFullYear()}-` +\n  `${pad(endLocal.getUTCMonth() + 1)}-` +\n  `${pad(endLocal.getUTCDate())}`;\n\nconst appointmentEndTime =\n  `${pad(endLocal.getUTCHours())}:` +\n  `${pad(endLocal.getUTCMinutes())}`;\n\nreturn [{\n  json: {\n    ...booking,\n    doctorName: doctor.doctorName,\n    durationMinutes: duration,\n    appointmentStart: start.toISOString(),\n    appointmentEnd: end.toISOString(),\n    appointmentEndDate,\n    appointmentEndTime,\n    availableHours: true\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -144
+      ],
+      "id": "56c1c4c0-e666-43e8-a9c1-997dbb180b34",
+      "name": "Calculate Appointment Interval"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 858102299,
+          "mode": "list",
+          "cachedResultName": "Doctors",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=858102299"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "doctorId",
+              "lookupValue": "={{ $json.body.doctorId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        -144
+      ],
+      "id": "e3b9e81f-e15e-4043-9783-64cd059f09f9",
+      "name": "Find Selected Doctor",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        -144
+      ],
+      "id": "a91266ec-c9ef-4967-b94e-2381d160cb61",
+      "name": "Find Existing Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst booking = $('Calculate Appointment Interval').first().json;\nconst rows = $input.all().map(item => item.json);\n\nif (booking.availableHours !== true) {\n  return [{\n    json: {\n      ...booking,\n      slotAvailable: false,\n      message: booking.message || 'Appointment time is invalid'\n    }\n  }];\n}\n\nconst start = new Date(booking.appointmentStart).getTime();\nconst end = new Date(booking.appointmentEnd).getTime();\n\nconst conflicts = rows.filter(row => {\n  if (!row.bookingId || !row.appointmentTime) return false;\n  if (String(row.doctorId) !== String(booking.doctorId)) return false;\n\n  const status = String(row.status || '').toLowerCase();\n\n  if (!['pending', 'confirmed'].includes(status)) return false;\n\n  const rowStart = new Date(\n    `${row.appointmentDate}T${row.appointmentTime}:00+05:30`\n  ).getTime();\n\n  const rowEnd = new Date(\n    `${row.appointmentDate}T${row.endTime}:00+05:30`\n  ).getTime();\n\n  if (!Number.isFinite(rowStart) || !Number.isFinite(rowEnd)) {\n    throw new Error('An existing appointment has an invalid date or time');\n  }\n\n  return start < rowEnd && end > rowStart;\n});\n\nreturn [{\n  json: {\n    ...booking,\n    slotAvailable: conflicts.length === 0,\n    message: conflicts.length === 0\n      ? 'Requested slot is available'\n      : 'This appointment time is already booked'\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -144
+      ],
+      "id": "56e2683b-8e57-438f-9176-e665394ad0c4",
+      "name": "Check Slot Availability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5edea7f0-bd3e-4aa0-9ad3-6fbc94fb305b",
+              "leftValue": "={{ $json.slotAvailable }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        832,
+        -144
+      ],
+      "id": "79d13d22-5062-4b6e-abf2-1762bb3924d5",
+      "name": "Is Slot Available?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"The requested appointment slot is unavailable. Please choose another time.\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        880,
+        0
+      ],
+      "id": "e69d1f3c-44f8-45a8-98b4-3772bd69482b",
+      "name": "Return Slot Unavailable"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst booking = $input.first().json;\n\nconst appointmentDate = String(booking.appointmentDate ?? '');\nconst appointmentTime = String(booking.appointmentTime ?? '');\n\nconst duration = Number(booking.durationMinutes ?? 30);\n\nif (!booking.patientName || !booking.email || !booking.doctorId) {\n  throw new Error('Missing required patient, email, or doctor information.');\n}\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(appointmentDate)) {\n  throw new Error('Invalid appointment date.');\n}\n\nif (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(appointmentTime)) {\n  throw new Error('Invalid appointment time.');\n}\n\nconst [year, month, day] = appointmentDate.split('-').map(Number);\nconst dateCheck = new Date(Date.UTC(year, month - 1, day));\n\nif (\n  dateCheck.getUTCFullYear() !== year ||\n  dateCheck.getUTCMonth() !== month - 1 ||\n  dateCheck.getUTCDate() !== day\n) {\n  throw new Error('Invalid calendar date.');\n}\n\nconst [hour, minute] = appointmentTime.split(':').map(Number);\nconst startMinutes = hour * 60 + minute;\nconst endMinutes = startMinutes + duration;\n\nif (!Number.isInteger(duration) || duration <= 0 || endMinutes >= 1440) {\n  throw new Error('Invalid appointment duration.');\n}\n\nconst pad = n => String(n).padStart(2, '0');\nconst endTime =\n  `${pad(Math.floor(endMinutes / 60))}:${pad(endMinutes % 60)}`;\n\nconst bookingId = booking.bookingId || `BOOK-${Date.now()}`;\n\nreturn [{\n  json: {\n    ...booking,\n    bookingId,\n    appointmentDate,\n    appointmentTime,\n    endTime,\n    appointmentStart: `${appointmentDate}T${appointmentTime}:00+05:30`,\n    appointmentEnd: `${appointmentDate}T${endTime}:00+05:30`,\n    status: 'confirmed',\n    calendarEventId: '',\n    emailStatus: 'not_sent',\n    whatsappStatus: 'not_sent',\n    reminderSent: false,\n    createdAt: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "4d85e4f2-6880-4c19-8895-d64cce75b1bb",
+      "name": "Prepare Appointment Record"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bookingId": "={{ $('Prepare Appointment Record').first().json.bookingId }}",
+            "patientName": "={{ $('Prepare Appointment Record').first().json.patientName }}",
+            "email": "={{ $('Prepare Appointment Record').first().json.email }}",
+            "phone": "={{ $('Prepare Appointment Record').first().json.phone }}",
+            "doctorId": "={{ $('Prepare Appointment Record').first().json.doctorId }}",
+            "appointmentDate": "={{ $('Prepare Appointment Record').first().json.appointmentDate }}",
+            "appointmentTime": "={{ $('Prepare Appointment Record').first().json.appointmentTime }}",
+            "endTime": "={{ $('Prepare Appointment Record').first().json.endTime }}",
+            "status": "={{ $('Prepare Appointment Record').first().json.status }}",
+            "calendarEventId": "=",
+            "emailStatus": "={{ $('Prepare Appointment Record').first().json.emailStatus }}",
+            "whatsappStatus": "={{ $('Prepare Appointment Record').first().json.whatsappStatus }}",
+            "reminderSent": "={{ $('Prepare Appointment Record').first().json.reminderSent }}",
+            "createdAt": "={{ $('Prepare Appointment Record').first().json.createdAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "bookingId",
+              "displayName": "bookingId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "patientName",
+              "displayName": "patientName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "doctorId",
+              "displayName": "doctorId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointmentDate",
+              "displayName": "appointmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointmentTime",
+              "displayName": "appointmentTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "calendarEventId",
+              "displayName": "calendarEventId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "emailStatus",
+              "displayName": "emailStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "whatsappStatus",
+              "displayName": "whatsappStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reminderSent",
+              "displayName": "reminderSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "createdAt",
+              "displayName": "createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1152,
+        -160
+      ],
+      "id": "6ce0bb02-8c16-48dd-b91e-718c875f7a04",
+      "name": "Google Sheets — Append Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "6e204b45f3c5837a0f05cc81ea4239639524bed434076798ce4d1ba900beea1d@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Clinic Appointments"
+        },
+        "start": "={{ $('Prepare Appointment Record').first().json.appointmentStart }}",
+        "end": "={{ $('Prepare Appointment Record').first().json.appointmentEnd }}",
+        "additionalFields": {
+          "summary": "={{ 'Clinic Appointment - ' + $('Prepare Appointment Record').first().json.bookingId }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1328,
+        -160
+      ],
+      "id": "68ec0518-4444-4afa-b5dd-7739c3e2d6c9",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "lNacFz2nmOmBbsTa",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -224,
+        240
+      ],
+      "id": "5054674d-77f4-42dc-bbd2-b330a1f3871d",
+      "name": "Check Upcoming Appointments"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        240
+      ],
+      "id": "caac5142-abd1-4d28-9275-8064f3d93237",
+      "name": "Get Appointments",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn $input.all().filter(item => {\n  const row = item.json;\n\n  return (\n    String(row.status || '').trim().toLowerCase() === 'confirmed' &&\n    String(row.reminderSent || '').trim().toUpperCase() !== 'TRUE' &&\n    Boolean(row.email) &&\n    Boolean(row.bookingId)\n  );\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        240
+      ],
+      "id": "4147448d-ad16-44fa-8855-cfb5a697d8d0",
+      "name": "Find Due Reminders"
+    },
+    {
+      "parameters": {
+        "sendTo": "=venkatasaigunda82@gmail.com",
+        "subject": "Reminder: Your Clinic Appointment",
+        "emailType": "text",
+        "message": "= Hello {{ $json.patientName }},  This is a reminder that your clinic appointment is scheduled for:  Doctor: {{ $json.doctorName }} Date: {{ $json.appointmentDate }} Time: {{ $json.appointmentTime }} Booking ID: {{ $json.bookingId }}  Please contact the clinic if you need to reschedule.  Regards, Clinic Appointment Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        240
+      ],
+      "id": "7b698ef6-1143-4855-b9f0-d4129c20c345",
+      "name": "Send Appointment Reminder",
+      "webhookId": "e65758ad-03e9-44b9-ad4b-aed727d90f47",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "brf5JKwc217mIv50",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bookingId": "={{ $('Find Due Reminders').item.json.bookingId }}",
+            "reminderSent": "TRUE"
+          },
+          "matchingColumns": [
+            "bookingId"
+          ],
+          "schema": [
+            {
+              "id": "bookingId",
+              "displayName": "bookingId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "patientName",
+              "displayName": "patientName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "doctorId",
+              "displayName": "doctorId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentDate",
+              "displayName": "appointmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentTime",
+              "displayName": "appointmentTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "calendarEventId",
+              "displayName": "calendarEventId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "emailStatus",
+              "displayName": "emailStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsappStatus",
+              "displayName": "whatsappStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reminderSent",
+              "displayName": "reminderSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "createdAt",
+              "displayName": "createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        240
+      ],
+      "id": "393d581b-1cdb-4a2a-aed6-43ea4e39d699",
+      "name": "Mark Reminder Sent",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic-cancel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -240,
+        512
+      ],
+      "id": "245c667a-693a-41af-85c3-b49f21bd9fd1",
+      "name": "Receive Cancellation Request",
+      "webhookId": "57590128-b1f3-4d2f-81c6-23c95c6bcc37"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=bookingId",
+              "lookupValue": "={{ $json.body.bookingId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        512
+      ],
+      "id": "045ea05b-ebbd-4f22-b44a-f3a072c8f227",
+      "name": "Find Appointment",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1c1562db-3f8c-429b-a106-f0bc2210149c",
+              "leftValue": "={{ $json.bookingId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c37c95bf-6422-47df-835f-c4e0bd9619a3",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "={{ $('Receive Cancellation Request').first().json.body.email }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "9cc012f7-a376-4f19-8482-e2fafd8f1ecd",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "confirmed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        512
+      ],
+      "id": "181edd57-f313-4063-8c63-29b707ce610e",
+      "name": "Verify Cancellation Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"The booking could not be cancelled. Check the details or contact the clinic.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        656
+      ],
+      "id": "2d96e68b-3e22-4d77-8c24-c7c9f6c647a2",
+      "name": "Cancellation Rejected'"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bookingId": "={{ $('Find Appointment').first().json.bookingId }}",
+            "status": "cancelled"
+          },
+          "matchingColumns": [
+            "bookingId"
+          ],
+          "schema": [
+            {
+              "id": "bookingId",
+              "displayName": "bookingId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "patientName",
+              "displayName": "patientName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "doctorId",
+              "displayName": "doctorId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentDate",
+              "displayName": "appointmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentTime",
+              "displayName": "appointmentTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "calendarEventId",
+              "displayName": "calendarEventId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "emailStatus",
+              "displayName": "emailStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsappStatus",
+              "displayName": "whatsappStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reminderSent",
+              "displayName": "reminderSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "createdAt",
+              "displayName": "createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        496
+      ],
+      "id": "2c26899d-c623-49ef-be6a-8a408fb2c0d7",
+      "name": "Mark Appointment Cancelled",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "6e204b45f3c5837a0f05cc81ea4239639524bed434076798ce4d1ba900beea1d@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Clinic Appointments"
+        },
+        "eventId": "={{ $('Find Appointment').first().json.calendarEventId?.trim() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        496
+      ],
+      "id": "f9e15915-2445-43c7-b59f-3e85aee40035",
+      "name": "Cancel Calendar Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "lNacFz2nmOmBbsTa",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Find Appointment').first().json.email }}",
+        "subject": "Clinic Appointment Cancelled",
+        "emailType": "text",
+        "message": "=Hello {{ $('Find Appointment').first().json.patientName }},  Your clinic appointment has been cancelled.  Booking ID: {{ $('Find Appointment').first().json.bookingId }} Doctor: {{ $('Find Appointment').first().json.doctorName }} Date: {{ $('Find Appointment').first().json.appointmentDate }} Time: {{ $('Find Appointment').first().json.appointmentTime }}  If you would like another appointment, please contact the clinic to book a new slot.  Regards, Clinic Appointment Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        496
+      ],
+      "id": "716264d7-92c3-4b5f-be0d-24c2b5a33dec",
+      "name": "Send a message",
+      "webhookId": "bbd3af2b-603d-4137-b300-5586e6aa9fc9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "brf5JKwc217mIv50",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Your appointment has been cancelled.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        496
+      ],
+      "id": "18671b34-34a5-4307-93ad-f4ca9ed8adcc",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clinic-reschedule",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -272,
+        880
+      ],
+      "id": "d30324a3-f379-479e-bb46-718b74606daf",
+      "name": "Receive Reschedule Request",
+      "webhookId": "3ef75da0-4a34-455f-bb8e-d4a60aac8de0"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "bookingId",
+              "lookupValue": "={{ $json.body.bookingId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -48,
+        880
+      ],
+      "id": "bd8e74fb-cc95-4559-a0bf-3ff17365dc82",
+      "name": "Find Existing Booking",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst booking = $input.first().json;\nconst request = $('Receive Reschedule Request').first().json.body ?? {};\n\nconst date = String(request.newAppointmentDate ?? '');\nconst time = String(request.newAppointmentTime ?? '');\n\nconst validDateFormat = /^\\d{4}-\\d{2}-\\d{2}$/.test(date);\nconst validTimeFormat = /^([01]\\d|2[0-3]):[0-5]\\d$/.test(time);\n\nlet validDate = false;\nlet validFutureDateTime = false;\n\nif (validDateFormat) {\n  const [year, month, day] = date.split('-').map(Number);\n  const parsedDate = new Date(Date.UTC(year, month - 1, day));\n\n  validDate =\n    parsedDate.getUTCFullYear() === year &&\n    parsedDate.getUTCMonth() === month - 1 &&\n    parsedDate.getUTCDate() === day;\n}\n\nif (validDate && validTimeFormat) {\n  const [year, month, day] = date.split('-').map(Number);\n  const [hour, minute] = time.split(':').map(Number);\n\n  // Convert the requested India time (UTC+05:30) to UTC.\n  const appointmentTimestamp = Date.UTC(\n    year, month - 1, day, hour, minute\n  ) - (5 * 60 + 30) * 60 * 1000;\n\n  validFutureDateTime = appointmentTimestamp > Date.now();\n}\n\nconst bookingExists =\n  Boolean(booking.bookingId) &&\n  booking.bookingId === request.bookingId;\n\nconst emailMatches =\n  String(booking.email ?? '').trim().toLowerCase() ===\n  String(request.email ?? '').trim().toLowerCase();\n\nconst isConfirmed =\n  String(booking.status ?? '').trim().toLowerCase() === 'confirmed';\n\nconst hasCalendarEvent =\n  String(booking.calendarEventId ?? '').trim() !== '';\n\nlet validationMessage = 'Request valid';\n\nif (!bookingExists) {\n  validationMessage = 'Booking not found';\n} else if (!emailMatches) {\n  validationMessage = 'Email does not match the booking';\n} else if (!isConfirmed) {\n  validationMessage = 'Booking is not confirmed';\n} else if (!hasCalendarEvent) {\n  validationMessage = 'Calendar event ID is missing';\n} else if (!validDate || !validTimeFormat || !validFutureDateTime) {\n  validationMessage = 'New appointment date or time is invalid or in the past';\n}\n\nconst valid =\n  bookingExists &&\n  emailMatches &&\n  isConfirmed &&\n  hasCalendarEvent &&\n  validDate &&\n  validTimeFormat &&\n  validFutureDateTime;\n\nreturn [{\n  json: {\n    ...booking,\n    newAppointmentDate: date,\n    newAppointmentTime: time,\n    valid,\n    validationMessage\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        880
+      ],
+      "id": "20d7fa8e-4f6c-42a9-9351-64a8414099c9",
+      "name": "Validate Reschedule Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f17ee45c-85b8-4f63-8087-5a64e976af85",
+              "leftValue": "={{ $json.valid\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        400,
+        880
+      ],
+      "id": "27282a1b-ba0d-460d-9a0c-7528d6ad4910",
+      "name": "Is Request Valid?"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        464,
+        1024
+      ],
+      "id": "ce8c7bfe-2190-4103-b00b-af496459a806",
+      "name": "Reschedule Rejected"
+    },
+    {
+      "parameters": {
+        "jsCode": "const booking = $input.first().json;\n\nconst [year, month, day] =\n  booking.newAppointmentDate.split('-').map(Number);\n\nconst [hour, minute] =\n  booking.newAppointmentTime.split(':').map(Number);\n\n// Preserve the original appointment duration.\nconst [oldStartHour, oldStartMinute] =\n  booking.appointmentTime.split(':').map(Number);\n\nconst [oldEndHour, oldEndMinute] =\n  booking.endTime.split(':').map(Number);\n\nconst durationMinutes =\n  (oldEndHour * 60 + oldEndMinute) -\n  (oldStartHour * 60 + oldStartMinute);\n\nif (durationMinutes <= 0) {\n  throw new Error('Existing appointment duration is invalid.');\n}\n\nconst startMinutes = hour * 60 + minute;\nconst endMinutes = startMinutes + durationMinutes;\n\nif (endMinutes > 24 * 60) {\n  throw new Error('Appointment ends after midnight.');\n}\n\nconst pad = n => String(n).padStart(2, '0');\n\nconst endTime =\n  `${pad(Math.floor(endMinutes / 60))}:${pad(endMinutes % 60)}`;\n\nreturn [{\n  json: {\n    ...booking,\n    newEndTime: endTime,\n    newStartDateTime:\n      `${booking.newAppointmentDate}T${booking.newAppointmentTime}:00+05:30`,\n    newEndDateTime:\n      `${booking.newAppointmentDate}T${endTime}:00+05:30`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        864
+      ],
+      "id": "7a0feb1e-4305-42c0-9aa5-c61ced7f6f87",
+      "name": "Calculate New Appointment Interval"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        752,
+        864
+      ],
+      "id": "1d89cf5e-ec5c-4459-8ebe-5c5f7687774a",
+      "name": "Find Existing Appointments1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(item => item.json);\nconst booking =\n  $('Calculate New Appointment Interval').first().json;\n\nconst requestedStart =\n  new Date(booking.newStartDateTime).getTime();\n\nconst requestedEnd =\n  new Date(booking.newEndDateTime).getTime();\n\nconst conflict = rows.some(row => {\n  // Ignore the appointment being rescheduled.\n  if (row.bookingId === booking.bookingId) return false;\n\n  // Only check appointments for the same doctor.\n  if (row.doctorId !== booking.doctorId) return false;\n\n  // Ignore cancelled appointments.\n  if (String(row.status).toLowerCase() !== 'confirmed') {\n    return false;\n  }\n\n  const existingStart = new Date(\n    `${row.appointmentDate}T${row.appointmentTime}:00+05:30`\n  ).getTime();\n\n  const existingEnd = new Date(\n    `${row.appointmentDate}T${row.endTime}:00+05:30`\n  ).getTime();\n\n  return requestedStart < existingEnd &&\n         requestedEnd > existingStart;\n});\n\nreturn [{\n  json: {\n    ...booking,\n    slotAvailable: !conflict\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        864
+      ],
+      "id": "49960cec-2dc9-4584-b3cf-2dae3b9ee8ad",
+      "name": "Check New Slot Availability"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "31d68f9d-edae-47bf-a5ef-1eacfe17a244",
+              "leftValue": "={{ $json.slotAvailable }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1088,
+        864
+      ],
+      "id": "e2526a5e-0bb9-4bb7-ad8a-7d9f3fc92dd3",
+      "name": "Is New Slot Available?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bookingId": "={{ $('Calculate New Appointment Interval').first().json.bookingId}}",
+            "appointmentDate": "={{ $('Calculate New Appointment Interval').first().json.newAppointmentDate }}",
+            "appointmentTime": "={{ $('Calculate New Appointment Interval').first().json.newAppointmentTime }}",
+            "endTime": "={{ $('Calculate New Appointment Interval').first().json.newEndTime }}",
+            "emailStatus": "confirmed",
+            "reminderSent": "FALSE"
+          },
+          "matchingColumns": [
+            "bookingId"
+          ],
+          "schema": [
+            {
+              "id": "bookingId",
+              "displayName": "bookingId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "patientName",
+              "displayName": "patientName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "doctorId",
+              "displayName": "doctorId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentDate",
+              "displayName": "appointmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "appointmentTime",
+              "displayName": "appointmentTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "calendarEventId",
+              "displayName": "calendarEventId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "emailStatus",
+              "displayName": "emailStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "whatsappStatus",
+              "displayName": "whatsappStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reminderSent",
+              "displayName": "reminderSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "createdAt",
+              "displayName": "createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1312,
+        848
+      ],
+      "id": "f282bf3d-bdd9-4508-a517-ded9e003197c",
+      "name": "Update Existing Booking",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"message\": \"The requested appointment slot is unavailable.\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1168,
+        1008
+      ],
+      "id": "d1be40a9-7ac5-4aac-87ec-cf6aa3734d5d",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "6e204b45f3c5837a0f05cc81ea4239639524bed434076798ce4d1ba900beea1d@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Clinic Appointments"
+        },
+        "eventId": "={{ $('Calculate New Appointment Interval').first().json.calendarEventId }}",
+        "updateFields": {
+          "end": "={{ $('Calculate New Appointment Interval').first().json.newEndDateTime }}",
+          "start": "={{ $('Calculate New Appointment Interval').first().json.newStartDateTime }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        848
+      ],
+      "id": "f03bbdf8-ff8f-4d77-b124-2c4d4e5a0a95",
+      "name": "Update an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "lNacFz2nmOmBbsTa",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Your appointment has been rescheduled successfully.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1840,
+        848
+      ],
+      "id": "0caf1d73-7bf6-4fbe-8f16-36bb83b9e8e1",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Calculate New Appointment Interval').first().json.email }}",
+        "subject": "Your Clinic Appointment Has Been Rescheduled",
+        "emailType": "text",
+        "message": "=Hello,  Your clinic appointment has been successfully rescheduled.  **Updated Appointment Details**  - **Booking ID:** {{ $('Calculate New Appointment Interval').first().json.bookingId }} - **Patient Name:** {{ $('Calculate New Appointment Interval').first().json.patientName }} - **Doctor ID:** {{ $('Calculate New Appointment Interval').first().json.doctorId }} - **Previous Appointment:** {{ $('Calculate New Appointment Interval').first().json.appointmentDate }} at {{ $('Calculate New Appointment Interval').first().json.appointmentTime }} - **New Appointment Date:** {{ $('Calculate New Appointment Interval').first().json.newAppointmentDate }} - **New Appointment Time:** {{ $('Calculate New Appointment Interval').first().json.newAppointmentTime }} - **End Time:** {{ $('Calculate New Appointment Interval').first().json.newEndTime }}  Please arrive a few minutes before your scheduled appointment.  If you have any questions or need to make further changes, please contact the clinic.  Thank you,   Clinic Booking Team",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        848
+      ],
+      "id": "6038c106-1e03-43d9-87d6-6704421d3642",
+      "name": "Clinic Booking - Reschedule",
+      "webhookId": "1d265d52-f44c-4014-a2f7-fac0f1cce3b1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "brf5JKwc217mIv50",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Appointment booked successfully\",\n  \"bookingId\": \"{{ $json.bookingId }}\",\n  \"patientName\": \"{{ $json.patientName }}\",\n  \"doctorId\": \"{{ $json.doctorId }}\",\n  \"appointmentDate\": \"{{ $json.appointmentDate }}\",\n  \"appointmentTime\": \"{{ $json.appointmentTime }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1872,
+        -160
+      ],
+      "id": "0c899962-c04d-4032-8ded-c21b7705da7f",
+      "name": "Return Booking Success"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Prepare Appointment Record').first().json.email }}",
+        "subject": "Clinic Appointment Confirmed",
+        "message": "=<h2>Appointment Confirmed</h2>\n\n<p>Hello {{ $('Prepare Appointment Record').first().json.patientName }},</p>\n\n<p>Your clinic appointment has been confirmed.</p>\n\n<p>\n  <strong>Booking ID:</strong>\n  {{ $('Prepare Appointment Record').first().json.bookingId }}\n</p>\n\n<p>\n  <strong>Doctor:</strong>\n  {{ $('Prepare Appointment Record').first().json.doctorName }}\n</p>\n\n<p>\n  <strong>Date:</strong>\n  {{ $('Prepare Appointment Record').first().json.appointmentDate }}\n</p>\n\n<p>\n  <strong>Time:</strong>\n  {{ $('Prepare Appointment Record').first().json.appointmentTime }}\n</p>\n\n<p>Please contact the clinic if you need to change your appointment.</p>\n\n<p>Regards,<br>Clinic Appointment Team</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        -160
+      ],
+      "id": "94b15e45-79f1-4eea-a502-8a6564745c57",
+      "name": "Send Booking Confirmation Email1",
+      "webhookId": "2502738a-5dfe-4551-9b9f-85905e91d606",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "brf5JKwc217mIv50",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo",
+          "mode": "list",
+          "cachedResultName": "Clinic Booking Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 885783661,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit#gid=885783661"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bookingId": "={{ $('Prepare Appointment Record').first().json.bookingId }}",
+            "calendarEventId": "={{ $('Create an event').first().json.id }}"
+          },
+          "matchingColumns": [
+            "bookingId"
+          ],
+          "schema": [
+            {
+              "id": "bookingId",
+              "displayName": "bookingId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "patientName",
+              "displayName": "patientName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "doctorId",
+              "displayName": "doctorId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentDate",
+              "displayName": "appointmentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "appointmentTime",
+              "displayName": "appointmentTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "endTime",
+              "displayName": "endTime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "calendarEventId",
+              "displayName": "calendarEventId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "emailStatus",
+              "displayName": "emailStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "whatsappStatus",
+              "displayName": "whatsappStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reminderSent",
+              "displayName": "reminderSent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "createdAt",
+              "displayName": "createdAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1504,
+        -160
+      ],
+      "id": "a61141e0-3209-4223-a070-d86d1e7a03d4",
+      "name": "Update Calendar Event ID",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "yc1wIsKyq3bZWkED",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive Clinic Booking": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Find Selected Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Appointment Interval": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Selected Doctor": {
+      "main": [
+        [
+          {
+            "node": "Calculate Appointment Interval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Appointments": {
+      "main": [
+        [
+          {
+            "node": "Check Slot Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Slot Availability": {
+      "main": [
+        [
+          {
+            "node": "Is Slot Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Slot Available?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Appointment Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Slot Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Appointment Record": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Append Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Append Row": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Update Calendar Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Upcoming Appointments": {
+      "main": [
+        [
+          {
+            "node": "Get Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Appointments": {
+      "main": [
+        [
+          {
+            "node": "Find Due Reminders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Due Reminders": {
+      "main": [
+        [
+          {
+            "node": "Send Appointment Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Appointment Reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark Reminder Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive Cancellation Request": {
+      "main": [
+        [
+          {
+            "node": "Find Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Appointment": {
+      "main": [
+        [
+          {
+            "node": "Verify Cancellation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Cancellation Request": {
+      "main": [
+        [
+          {
+            "node": "Mark Appointment Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancellation Rejected'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Appointment Cancelled": {
+      "main": [
+        [
+          {
+            "node": "Cancel Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive Reschedule Request": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Booking": {
+      "main": [
+        [
+          {
+            "node": "Validate Reschedule Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Reschedule Request": {
+      "main": [
+        [
+          {
+            "node": "Is Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Calculate New Appointment Interval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reschedule Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate New Appointment Interval": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Appointments1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Appointments1": {
+      "main": [
+        [
+          {
+            "node": "Check New Slot Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check New Slot Availability": {
+      "main": [
+        [
+          {
+            "node": "Is New Slot Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New Slot Available?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Booking": {
+      "main": [
+        [
+          {
+            "node": "Update an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event": {
+      "main": [
+        [
+          {
+            "node": "Clinic Booking - Reschedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clinic Booking - Reschedule": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Booking Confirmation Email1": {
+      "main": [
+        [
+          {
+            "node": "Return Booking Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Calendar Event ID": {
+      "main": [
+        [
+          {
+            "node": "Send Booking Confirmation Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "887da3e8-d9a5-448e-84ae-559120583196",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0a77e021ab1b631087191fa94d3e06fb08f31e77d8e0a41d188853e51fe12c6e"
+  },
+  "nodeGroups": [],
+  "id": "IEfViwFWwIx17YQI",
+  "tags": []
+}
