@@ -14,8 +14,16 @@ import { Appointment, Doctor, DayAvailability, TimeSlot } from '@clinic/shared';
 
 export const ManageBookingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const initialBookingId = searchParams.get('bookingId') || '';
-  const initialToken = searchParams.get('token') || '';
+  const paramBookingId = searchParams.get('bookingId') || '';
+  const paramToken = searchParams.get('token') || '';
+
+  const savedBookingId = typeof window !== 'undefined' ? localStorage.getItem('aura_last_booking_id') || '' : '';
+  const savedToken = typeof window !== 'undefined'
+    ? (localStorage.getItem('aura_last_booking_token') || localStorage.getItem('aura_last_booking_email') || '')
+    : '';
+
+  const initialBookingId = paramBookingId || savedBookingId;
+  const initialToken = paramToken || savedToken;
 
   // Lookup state
   const [bookingId, setBookingId] = useState(initialBookingId);
@@ -42,7 +50,7 @@ export const ManageBookingPage: React.FC = () => {
   const [rescheduling, setRescheduling] = useState(false);
   const [rescheduleSuccess, setRescheduleSuccess] = useState(false);
 
-  // Auto-verify if query params present
+  // Auto-verify if credentials are present
   useEffect(() => {
     if (initialBookingId && initialToken) {
       handleVerify(initialBookingId, initialToken);

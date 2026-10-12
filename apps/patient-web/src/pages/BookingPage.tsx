@@ -153,6 +153,13 @@ export const BookingPage: React.FC = () => {
       });
 
       setConfirmedBooking(response);
+      try {
+        localStorage.setItem('aura_last_booking_id', response.bookingId);
+        localStorage.setItem('aura_last_booking_email', response.email);
+        localStorage.setItem('aura_last_booking_token', response.verificationToken || '');
+      } catch (e) {
+        // Ignore localStorage restrictions
+      }
       setCurrentStep(7); // Move to confirmation
     } catch (err: any) {
       setSubmitError(err.message || 'Booking submission failed. Please try again.');
