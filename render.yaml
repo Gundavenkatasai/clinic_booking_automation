@@ -47,12 +47,18 @@ services:
         value: 5678
       - key: PORT
         value: 5678
+      - key: N8N_HOST
+        value: aura-clinic-n8n.onrender.com
       - key: N8N_PROTOCOL
         value: https
       - key: NODE_ENV
         value: production
       - key: WEBHOOK_URL
         value: https://aura-clinic-n8n.onrender.com/
+      - key: N8N_EDITOR_BASE_URL
+        value: https://aura-clinic-n8n.onrender.com/
+      - key: N8N_PROXY_HOPS
+        value: "1"
       - key: N8N_ENCRYPTION_KEY
         generateValue: true
       - key: DB_TYPE
