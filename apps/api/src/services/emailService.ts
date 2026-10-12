@@ -26,7 +26,8 @@ export class EmailService {
         };
       }
 
-      console.log(`[Gmail] Sent confirmation for ${appointment.bookingId} to ${appointment.email}`);
+      const maskedEmail = this.maskEmail(appointment.email);
+      console.log(`[Gmail] Sent confirmation for ${appointment.bookingId} to ${maskedEmail}`);
       return {
         success: true,
         status: 'sent',
@@ -42,6 +43,14 @@ export class EmailService {
     }
   }
 
+  private maskEmail(email: string): string {
+    const parts = email.split('@');
+    if (parts.length !== 2) return '***';
+    const name = parts[0];
+    const maskedName = name.length <= 2 ? `${name[0]}*` : `${name.slice(0, 2)}***`;
+    return `${maskedName}@${parts[1]}`;
+  }
+
   /**
    * Dispatch cancellation email
    */
@@ -50,7 +59,8 @@ export class EmailService {
     doctor: Doctor
   ): Promise<EmailDeliveryResult> {
     try {
-      console.log(`[Gmail] Sent cancellation notice for ${appointment.bookingId} to ${appointment.email}`);
+      const maskedEmail = this.maskEmail(appointment.email);
+      console.log(`[Gmail] Sent cancellation notice for ${appointment.bookingId} to ${maskedEmail}`);
       return {
         success: true,
         status: 'sent',
@@ -73,7 +83,8 @@ export class EmailService {
     doctor: Doctor
   ): Promise<EmailDeliveryResult> {
     try {
-      console.log(`[Gmail] Sent reschedule notice for ${appointment.bookingId} to ${appointment.email}`);
+      const maskedEmail = this.maskEmail(appointment.email);
+      console.log(`[Gmail] Sent reschedule notice for ${appointment.bookingId} to ${maskedEmail}`);
       return {
         success: true,
         status: 'sent',

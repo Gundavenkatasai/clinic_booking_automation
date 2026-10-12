@@ -24,3 +24,13 @@ services:
         value: "Clinic Booking Database"
       - key: GOOGLE_CALENDAR_NAME
         value: "Clinic Appointments"
+      - key: PATIENT_APP_ORIGIN
+        value: https://aura-clinic-patient.vercel.app
+      - key: ADMIN_APP_ORIGIN
+        value: https://aura-clinic-admin-one.vercel.app
+      - key: N8N_BOOKING_WEBHOOK_URL
+        value: https://sitting-possibilities-savannah-upgrade.trycloudflare.com/webhook/clinic-booking
+      - key: N8N_CANCELLATION_WEBHOOK_URL
+        value: https://sitting-possibilities-savannah-upgrade.trycloudflare.com/webhook/clinic-cancel
+      - key: N8N_RESCHEDULE_WEBHOOK_URL
+        value: https://sitting-possibilities-savannah-upgrade.trycloudflare.com/webhook/clinic-reschedule

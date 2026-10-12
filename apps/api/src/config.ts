@@ -11,8 +11,8 @@ export const config = {
   clinicTimezone: process.env.CLINIC_TIMEZONE || 'Asia/Kolkata', // India Standard Time (IST)
   
   // CORS Origins
-  patientAppOrigin: process.env.PATIENT_APP_ORIGIN || 'http://localhost:5173',
-  adminAppOrigin: process.env.ADMIN_APP_ORIGIN || 'http://localhost:5174',
+  patientAppOrigin: process.env.PATIENT_APP_ORIGIN || 'https://aura-clinic-patient.vercel.app',
+  adminAppOrigin: process.env.ADMIN_APP_ORIGIN || 'https://aura-clinic-admin-one.vercel.app',
 
   // Google Sheets & Calendar configuration
   spreadsheetName: process.env.GOOGLE_SHEETS_DOCUMENT_NAME || 'Clinic Booking Database',

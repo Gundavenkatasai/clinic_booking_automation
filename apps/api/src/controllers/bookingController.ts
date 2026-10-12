@@ -184,9 +184,10 @@ export class BookingController {
         });
         return;
       }
-      res.status(500).json({
+      const statusCode = err.status || err.statusCode || 500;
+      res.status(statusCode).json({
         success: false,
-        error: { code: 'BOOKING_CREATION_FAILED', message: err.message },
+        error: { code: err.code || 'BOOKING_CREATION_FAILED', message: err.message },
       });
     }
   }
@@ -315,9 +316,10 @@ export class BookingController {
         });
         return;
       }
-      res.status(500).json({
+      const statusCode = err.status || err.statusCode || 500;
+      res.status(statusCode).json({
         success: false,
-        error: { code: 'CANCELLATION_FAILED', message: err.message },
+        error: { code: err.code || 'CANCELLATION_FAILED', message: err.message },
       });
     }
   }
@@ -389,8 +391,9 @@ export class BookingController {
       }
 
       // Acquire lock on new slot if changing slot
+      let newSlotKey = '';
       if (!isSameSlot) {
-        const newSlotKey = reservationStore.getSlotKey(doctor.doctorId, validated.newDate, validated.newTime);
+        newSlotKey = reservationStore.getSlotKey(doctor.doctorId, validated.newDate, validated.newTime);
         const lockAcquired = reservationStore.acquireLock(newSlotKey, `reschedule_${appointment.bookingId}`, 60000);
         if (!lockAcquired) {
           res.status(409).json({
@@ -401,43 +404,50 @@ export class BookingController {
         }
       }
 
-      // Calculate new end time
-      const [h, m] = validated.newTime.split(':').map(Number);
-      const endTotalMins = h * 60 + m + doctor.durationMinutes;
-      const newEndTime = `${String(Math.floor(endTotalMins / 60)).padStart(2, '0')}:${String(endTotalMins % 60).padStart(2, '0')}`;
+      try {
+        // Calculate new end time
+        const [h, m] = validated.newTime.split(':').map(Number);
+        const endTotalMins = h * 60 + m + doctor.durationMinutes;
+        const newEndTime = `${String(Math.floor(endTotalMins / 60)).padStart(2, '0')}:${String(endTotalMins % 60).padStart(2, '0')}`;
 
-      // Trigger n8n reschedule workflow
-      const n8nResult = await n8nService.triggerRescheduleWorkflow(
-        appointment,
-        doctor,
-        validated.newDate,
-        validated.newTime,
-        newEndTime
-      );
+        // Trigger n8n reschedule workflow
+        const n8nResult = await n8nService.triggerRescheduleWorkflow(
+          appointment,
+          doctor,
+          validated.newDate,
+          validated.newTime,
+          newEndTime
+        );
 
-      // Update appointment in data store
-      const updated = dataStore.updateAppointment(appointment.bookingId, {
-        appointmentDate: validated.newDate,
-        appointmentTime: validated.newTime,
-        endTime: newEndTime,
-        status: 'rescheduled',
-        calendarEventId: n8nResult.calendarEventId,
-        reminderSent: false, // Reset reminder flag on reschedule
-      });
+        // Update appointment in data store
+        const updated = dataStore.updateAppointment(appointment.bookingId, {
+          appointmentDate: validated.newDate,
+          appointmentTime: validated.newTime,
+          endTime: newEndTime,
+          status: 'rescheduled',
+          calendarEventId: n8nResult.calendarEventId,
+          reminderSent: false, // Reset reminder flag on reschedule
+        });
 
-      auditService.record({
-        actor: 'PATIENT',
-        action: 'APPOINTMENT_RESCHEDULED',
-        bookingId: appointment.bookingId,
-        details: `Rescheduled from ${appointment.appointmentDate} ${appointment.appointmentTime} to ${validated.newDate} ${validated.newTime}`,
-        ipAddress: req.ip,
-      });
+        auditService.record({
+          actor: 'PATIENT',
+          action: 'APPOINTMENT_RESCHEDULED',
+          bookingId: appointment.bookingId,
+          details: `Rescheduled from ${appointment.appointmentDate} ${appointment.appointmentTime} to ${validated.newDate} ${validated.newTime}`,
+          ipAddress: req.ip,
+        });
 
-      res.json({
-        success: true,
-        data: updated,
-        message: 'Appointment successfully rescheduled.',
-      });
+        res.json({
+          success: true,
+          data: updated,
+          message: 'Appointment successfully rescheduled.',
+        });
+      } catch (err: any) {
+        if (newSlotKey) {
+          reservationStore.releaseLock(newSlotKey);
+        }
+        throw err;
+      }
     } catch (err: any) {
       if (err.name === 'ZodError') {
         res.status(400).json({
@@ -446,9 +456,10 @@ export class BookingController {
         });
         return;
       }
-      res.status(500).json({
+      const statusCode = err.status || err.statusCode || 500;
+      res.status(statusCode).json({
         success: false,
-        error: { code: 'RESCHEDULE_FAILED', message: err.message },
+        error: { code: err.code || 'RESCHEDULE_FAILED', message: err.message },
       });
     }
   }
