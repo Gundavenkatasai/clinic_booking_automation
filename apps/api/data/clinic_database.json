@@ -1,0 +1,65 @@
+{
+  "doctors": [
+    {
+      "doctorId": "DOC-101",
+      "doctorName": "Dr. Ananya Sharma",
+      "specialty": "Cardiology & Preventive Heart Care",
+      "qualifications": "MD, DM (Cardiology), FACC",
+      "workingDays": "Monday, Tuesday, Wednesday, Thursday, Friday",
+      "openingTime": "09:00",
+      "closingTime": "17:00",
+      "durationMinutes": 30,
+      "active": true,
+      "bio": "Specialist in non-invasive cardiology, preventive coronary screening, and clinical hypertension management with over 14 years of clinical practice."
+    },
+    {
+      "doctorId": "DOC-102",
+      "doctorName": "Dr. Rajesh Kumar",
+      "specialty": "Pediatrics & Adolescent Care",
+      "qualifications": "MD (Pediatrics), DNB, FIAP",
+      "workingDays": "Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
+      "openingTime": "10:00",
+      "closingTime": "18:00",
+      "durationMinutes": 20,
+      "active": true,
+      "bio": "Dedicated pediatrician focused on neonatal care, childhood developmental assessments, and comprehensive pediatric health."
+    },
+    {
+      "doctorId": "DOC-103",
+      "doctorName": "Dr. Priya Nair",
+      "specialty": "Dermatology & Medical Cosmetology",
+      "qualifications": "MD (Dermatology), Fellow in Dermatosurgery",
+      "workingDays": "Tuesday, Wednesday, Thursday, Friday, Saturday",
+      "openingTime": "09:30",
+      "closingTime": "16:30",
+      "durationMinutes": 30,
+      "active": true,
+      "bio": "Expert in clinical dermatology, autoimmune skin conditions, allergy management, and targeted therapeutic skincare."
+    },
+    {
+      "doctorId": "DOC-104",
+      "doctorName": "Dr. Vikram Patel",
+      "specialty": "General Medicine & Family Health",
+      "qualifications": "MBBS, MD (Internal Medicine)",
+      "workingDays": "Monday, Tuesday, Wednesday, Thursday, Friday",
+      "openingTime": "08:30",
+      "closingTime": "15:30",
+      "durationMinutes": 15,
+      "active": true,
+      "bio": "Experienced primary care physician managing lifestyle diseases, metabolic screening, and chronic disease consultations."
+    },
+    {
+      "doctorId": "DOC-105",
+      "doctorName": "Dr. Meera Reddy",
+      "specialty": "Orthopedics & Sports Rehabilitation",
+      "qualifications": "MS (Orthopedics), Fellowship in Joint Replacement",
+      "workingDays": "Monday, Wednesday, Friday",
+      "openingTime": "11:00",
+      "closingTime": "17:00",
+      "durationMinutes": 30,
+      "active": false,
+      "bio": "Consultant orthopedic surgeon currently on academic sabbatical."
+    }
+  ],
+  "appointments": []
+}

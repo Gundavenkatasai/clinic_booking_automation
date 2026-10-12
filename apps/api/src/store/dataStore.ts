@@ -71,6 +71,24 @@ const INITIAL_DOCTORS: Doctor[] = [
 
 const INITIAL_APPOINTMENTS: Appointment[] = [
   {
+    bookingId: 'APT-858284-60D1',
+    patientName: 'sai',
+    email: 'venkatasaigunda82@gmail.com',
+    phone: '+919963039884',
+    doctorId: 'DOC-101',
+    appointmentDate: '2026-10-13',
+    appointmentTime: '15:00',
+    endTime: '15:30',
+    status: 'confirmed',
+    calendarEventId: 'a4qsfj3vit37k1sbbm53bhgva8@google.com',
+    emailStatus: 'sent',
+    whatsappStatus: 'not_configured',
+    reminderSent: false,
+    createdAt: '2026-10-12T10:27:41.686Z',
+    verificationToken: 'tok_sai_858284',
+    reasonForVisit: 'Clinical Consultation',
+  },
+  {
     bookingId: 'APT-821508-7B32',
     patientName: 'suri',
     email: 'venkatasaigunda5@gmail.com',
@@ -293,7 +311,14 @@ export class DataStore {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         const parsed: DatabaseData = JSON.parse(raw);
         this.doctors = parsed.doctors && parsed.doctors.length > 0 ? parsed.doctors : [...INITIAL_DOCTORS];
-        this.appointments = parsed.appointments && parsed.appointments.length > 0 ? parsed.appointments : [...INITIAL_APPOINTMENTS];
+        const loadedAppointments: Appointment[] = parsed.appointments && parsed.appointments.length > 0 ? parsed.appointments : [];
+        const existingIds = new Set(loadedAppointments.map((a) => a.bookingId.toLowerCase()));
+        for (const initial of INITIAL_APPOINTMENTS) {
+          if (!existingIds.has(initial.bookingId.toLowerCase())) {
+            loadedAppointments.push(initial);
+          }
+        }
+        this.appointments = loadedAppointments;
       } else {
         this.doctors = [...INITIAL_DOCTORS];
         this.appointments = [...INITIAL_APPOINTMENTS];

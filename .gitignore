@@ -16,8 +16,10 @@ build/
 
 # Logs & Temporary Data
 *.log
-data/
+/data/
+!apps/api/data/
 **/data/*.json
+!apps/api/data/clinic_database.json
 
 # Editor & OS files
 .vscode/
