@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { Router, Request, Response } from 'express';
 import { DoctorController } from '../controllers/doctorController.js';
 import { BookingController } from '../controllers/bookingController.js';
@@ -56,5 +58,19 @@ router.patch('/admin/doctors/:doctorId', requireAdminAuth, AdminController.updat
 
 // Audit Logs
 router.get('/admin/audit-logs', requireAdminAuth, AdminController.getAuditLogs);
+
+// Export Appointments as Excel CSV
+router.get('/appointments/export.csv', (req: Request, res: Response) => {
+  const dataDir = fs.existsSync(path.resolve(process.cwd(), 'apps/api/data'))
+    ? path.resolve(process.cwd(), 'apps/api/data')
+    : path.resolve(process.cwd(), 'data');
+  const csvPath = path.resolve(dataDir, 'appointments.csv');
+  if (fs.existsSync(csvPath)) {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="appointments.csv"');
+    return res.sendFile(csvPath);
+  }
+  res.status(404).send('No appointments found');
+});
 
 export default router;

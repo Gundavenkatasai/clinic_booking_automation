@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
 import { adminApi, PaginatedAppointments } from '../api/client';
 import { Appointment, Doctor } from '@clinic/shared';
@@ -123,18 +125,42 @@ export const AppointmentsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setPage(1);
-            fetchAppointments();
-          }}
-          className="btn-admin btn-admin-secondary"
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          <span>Refresh</span>
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <a
+            href="http://localhost:5000/api/appointments/export.csv"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-admin btn-admin-secondary"
+            title="Download full appointments database formatted for Microsoft Excel & Google Sheets"
+          >
+            <Download size={14} />
+            <span>Export Excel (.csv)</span>
+          </a>
+
+          <a
+            href="https://docs.google.com/spreadsheets/d/1sznUpeC_-AZIuwIln9dM8cUfAUmy8d1cIzCSTptWIjo/edit"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-admin btn-admin-secondary"
+            title="Open live Google Sheets database"
+          >
+            <ExternalLink size={14} />
+            <span>Google Sheet</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPage(1);
+              fetchAppointments();
+            }}
+            className="btn-admin btn-admin-primary"
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Controls Bar */}

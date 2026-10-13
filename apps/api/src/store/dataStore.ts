@@ -3,7 +3,13 @@ import path from 'path';
 import { Doctor, Appointment } from '@clinic/shared';
 import { reservationStore } from './reservationStore.js';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const resolveDataDir = (): string => {
+  if (fs.existsSync(path.resolve(process.cwd(), 'apps/api/data'))) {
+    return path.resolve(process.cwd(), 'apps/api/data');
+  }
+  return path.resolve(process.cwd(), 'data');
+};
+const DATA_DIR = resolveDataDir();
 const DATA_FILE = path.resolve(DATA_DIR, 'clinic_database.json');
 
 const INITIAL_DOCTORS: Doctor[] = [
@@ -333,14 +339,58 @@ export class DataStore {
 
   public saveDatabase(): void {
     try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+      const dataDir = resolveDataDir();
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
       }
       const data: DatabaseData = {
         doctors: this.doctors,
         appointments: this.appointments,
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+
+      // Automatically maintain appointments.csv matching the Google Sheets schema
+      const headers = [
+        'bookingId',
+        'patientName',
+        'email',
+        'phone',
+        'doctorId',
+        'appointmentDate',
+        'appointmentTime',
+        'endTime',
+        'status',
+        'calendarEventId',
+        'emailStatus',
+        'whatsappStatus',
+        'reminderSent',
+        'createdAt',
+      ];
+      const rows = this.appointments.map((a) => [
+        a.bookingId,
+        `"${(a.patientName || '').replace(/"/g, '""')}"`,
+        a.email,
+        a.phone,
+        a.doctorId,
+        a.appointmentDate,
+        a.appointmentTime,
+        a.endTime,
+        a.status,
+        a.calendarEventId,
+        a.emailStatus,
+        a.whatsappStatus,
+        a.reminderSent,
+        a.createdAt,
+      ]);
+      const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+      fs.writeFileSync(path.resolve(dataDir, 'appointments.csv'), csvContent, 'utf-8');
+
+      // Keep root data/ appointments.csv synced if present
+      const rootDataDir = path.resolve(process.cwd(), 'data');
+      if (rootDataDir !== dataDir && fs.existsSync(rootDataDir)) {
+        fs.writeFileSync(path.resolve(rootDataDir, 'appointments.csv'), csvContent, 'utf-8');
+        fs.writeFileSync(path.resolve(rootDataDir, 'clinic_database.json'), JSON.stringify(data, null, 2), 'utf-8');
+      }
     } catch (err) {
       console.error('Failed to persist database file:', err);
     }

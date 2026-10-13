@@ -24,9 +24,9 @@ export class EmailService {
           user: config.smtpUser,
           pass: config.smtpPass,
         },
-        connectionTimeout: 4000,
-        greetingTimeout: 4000,
-        socketTimeout: 4000,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
       });
     }
 
@@ -61,8 +61,8 @@ export class EmailService {
 
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error('SMTP timeout: port 465/587 blocked by cloud host')),
-          4500
+          () => reject(new Error('SMTP timeout: connection took longer than 12s')),
+          12000
         )
       );
 

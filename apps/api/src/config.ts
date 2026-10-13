@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), 'apps/api/.env') });
 
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
@@ -28,8 +30,9 @@ export const config = {
   n8nAvailabilityWebhookUrl: process.env.N8N_AVAILABILITY_WEBHOOK_URL || '',
   n8nInternalAuthToken: process.env.N8N_INTERNAL_AUTH_TOKEN || '',
   n8nFallbackOnError:
-    process.env.N8N_FALLBACK_ON_ERROR === 'true' ||
-    (process.env.NODE_ENV === 'production' && process.env.N8N_FALLBACK_ON_ERROR !== 'false'),
+    process.env.NODE_ENV === 'test'
+      ? false
+      : (process.env.N8N_FALLBACK_ON_ERROR !== 'false'),
 
   // Admin bootstrap credentials (used for first admin creation in dev/production)
   adminUsername: process.env.ADMIN_USERNAME || 'admin@auraclinic.com',

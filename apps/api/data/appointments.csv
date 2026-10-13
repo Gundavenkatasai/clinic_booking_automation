@@ -1,0 +1,1 @@
+bookingId,patientName,email,phone,doctorId,appointmentDate,appointmentTime,endTime,status,calendarEventId,emailStatus,whatsappStatus,reminderSent,createdAt
