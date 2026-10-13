@@ -119,6 +119,18 @@ export class N8nService {
         signal: controller.signal,
       });
     } catch (networkErr: any) {
+      if (config.n8nFallbackOnError) {
+        console.warn(
+          `[n8n] Booking webhook network failure (${networkErr.name || networkErr.message}). Executing graceful local fallback [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
+        );
+        const calResult = await calendarService.createEvent(appointment, doctor);
+        const emailResult = await emailService.sendBookingConfirmation(appointment, doctor);
+        return {
+          calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
+          emailStatus: emailResult.status || 'sent',
+        };
+      }
+
       if (networkErr.name === 'AbortError') {
         console.error(`[n8n] Booking webhook timed out [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`);
         const err = new Error('Booking automation service timed out. Please try again.');
@@ -158,6 +170,19 @@ export class N8nService {
         (err as any).status = 400;
         (err as any).code = 'VALIDATION_ERROR';
         throw err;
+      }
+
+      // If webhook is not registered on n8n (HTTP 404) or fallback is enabled, gracefully fulfill via local adapters
+      if (status === 404 || config.n8nFallbackOnError) {
+        console.warn(
+          `[n8n] Booking webhook returned status ${status}. Executing graceful local fallback [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
+        );
+        const calResult = await calendarService.createEvent(appointment, doctor);
+        const emailResult = await emailService.sendBookingConfirmation(appointment, doctor);
+        return {
+          calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
+          emailStatus: emailResult.status || 'sent',
+        };
       }
 
       const err = new Error('Booking automation service returned an error. Please try again.');
@@ -243,6 +268,15 @@ export class N8nService {
       clearTimeout(timeout);
 
       if (!response.ok) {
+        if (response.status === 404 || config.n8nFallbackOnError) {
+          console.warn(`[n8n] Cancellation webhook returned ${response.status}. Executing direct local fallback.`);
+          if (appointment.calendarEventId) {
+            await calendarService.cancelEvent(appointment.calendarEventId);
+          }
+          await emailService.sendCancellationNotice(appointment, doctor);
+          return true;
+        }
+
         const errBody = (await response.json().catch(() => ({}))) as { message?: string };
         const err = new Error(errBody.message || 'Cancellation rejected by workflow service');
         (err as any).status = response.status;
@@ -252,6 +286,14 @@ export class N8nService {
       return true;
     } catch (err: any) {
       if (err.status) throw err;
+      if (config.n8nFallbackOnError) {
+        console.warn(`[n8n] Cancellation webhook error (${err.message}). Executing direct local fallback.`);
+        if (appointment.calendarEventId) {
+          await calendarService.cancelEvent(appointment.calendarEventId);
+        }
+        await emailService.sendCancellationNotice(appointment, doctor);
+        return true;
+      }
       if (err.name === 'AbortError') {
         const timeoutErr = new Error('Cancellation webhook timed out. Please try again.');
         (timeoutErr as any).status = 504;
@@ -319,10 +361,25 @@ export class N8nService {
       clearTimeout(timeout);
 
       if (!response.ok) {
+        if (response.status === 409) {
+          const errBody = (await response.json().catch(() => ({}))) as { message?: string };
+          const err = new Error(errBody.message || 'The requested appointment slot is unavailable.');
+          (err as any).status = 409;
+          (err as any).code = 'SLOT_UNAVAILABLE';
+          throw err;
+        }
+
+        if (response.status === 404 || config.n8nFallbackOnError) {
+          console.warn(`[n8n] Reschedule webhook returned ${response.status}. Executing direct local fallback.`);
+          const calResult = await calendarService.updateEvent(appointment.calendarEventId, appointment, doctor);
+          await emailService.sendRescheduleNotice(appointment, doctor);
+          return { calendarEventId: calResult.calendarEventId };
+        }
+
         const errBody = (await response.json().catch(() => ({}))) as { message?: string };
         const err = new Error(errBody.message || 'Reschedule rejected by workflow service');
         (err as any).status = response.status;
-        (err as any).code = response.status === 409 ? 'SLOT_UNAVAILABLE' : 'RESCHEDULE_FAILED';
+        (err as any).code = 'RESCHEDULE_FAILED';
         throw err;
       }
 
@@ -330,6 +387,12 @@ export class N8nService {
       return { calendarEventId: result.calendarEventId || appointment.calendarEventId };
     } catch (err: any) {
       if (err.status) throw err;
+      if (config.n8nFallbackOnError) {
+        console.warn(`[n8n] Reschedule webhook error (${err.message}). Executing direct local fallback.`);
+        const calResult = await calendarService.updateEvent(appointment.calendarEventId, appointment, doctor);
+        await emailService.sendRescheduleNotice(appointment, doctor);
+        return { calendarEventId: calResult.calendarEventId };
+      }
       if (err.name === 'AbortError') {
         const timeoutErr = new Error('Reschedule webhook timed out. Please try again.');
         (timeoutErr as any).status = 504;

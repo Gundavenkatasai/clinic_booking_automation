@@ -1,1 +1,7 @@
 FROM n8nio/n8n:latest
+
+USER root
+RUN mkdir -p /workflows
+COPY n8n/clinic-appointment-workflow.json /workflows/clinic-appointment-workflow.json
+RUN chown -R node:node /workflows
+USER node

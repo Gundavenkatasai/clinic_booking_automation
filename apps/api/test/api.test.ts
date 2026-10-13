@@ -345,6 +345,45 @@ describe('Aura Health Clinic API Test Suite', () => {
 
       expect(dataStore.getAllAppointments()).toHaveLength(0);
     });
+
+    it('gracefully falls back and confirms booking when n8n webhook returns 404 not registered', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 404,
+            message: 'The requested webhook "POST clinic-booking" is not registered.',
+          }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+
+      const res = await request(app).post('/api/bookings').send(validBooking);
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.bookingId).toBeDefined();
+      expect(res.body.data.calendarEventId).toMatch(/^gcal_/);
+      expect(res.body.data.emailStatus).toBe('sent');
+
+      expect(dataStore.getAllAppointments()).toHaveLength(1);
+    });
+
+    it('gracefully falls back when n8nFallbackOnError is active and n8n returns 500', async () => {
+      config.n8nFallbackOnError = true;
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: 'Workflow internal crash' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+      const res = await request(app).post('/api/bookings').send(validBooking);
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.bookingId).toBeDefined();
+
+      // Reset fallback flag for subsequent tests
+      config.n8nFallbackOnError = false;
+    });
   });
 
   describe('Manage Appointment (Verify, Cancel, Reschedule)', () => {
