@@ -162,13 +162,13 @@ export const BookingPage: React.FC = () => {
       }
       setCurrentStep(7); // Move to confirmation
     } catch (err: any) {
-      setSubmitError(err.message || 'Booking submission failed. Please try again.');
-      // If conflict, offer to re-select slot
       if (err.code === 'SLOT_UNAVAILABLE' || err.code === 'SLOT_CONCURRENT_CONFLICT') {
-        // Refresh availability
+        setSubmitError('This appointment slot has already been reserved. Please pick another available slot.');
         if (selectedDoctor && selectedDate) {
           api.getDoctorAvailability(selectedDoctor.doctorId, selectedDate).then(setAvailability);
         }
+      } else {
+        setSubmitError(err.message || 'Booking submission failed. Please try again.');
       }
     } finally {
       setSubmitting(false);
@@ -694,7 +694,7 @@ export const BookingPage: React.FC = () => {
               <div><strong>Status:</strong> <span className="badge badge-sage">Confirmed</span></div>
               <div><strong>Specialist:</strong> {selectedDoctor.doctorName} ({selectedDoctor.specialty})</div>
               <div><strong>Date & Time:</strong> {confirmedBooking.appointmentDate} at {confirmedBooking.appointmentTime} – {confirmedBooking.endTime} IST</div>
-              <div><strong>Gmail Confirmation:</strong> Sent to {confirmedBooking.email}</div>
+              <div><strong>Email Confirmation:</strong> Dispatched to {confirmedBooking.email}</div>
               <div><strong>Verification Token:</strong> <code style={{ backgroundColor: '#E2E8F0', padding: '0.15rem 0.35rem', borderRadius: 4 }}>{confirmedBooking.verificationToken}</code></div>
             </div>
 

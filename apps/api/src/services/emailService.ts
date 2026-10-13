@@ -24,10 +24,64 @@ export class EmailService {
           user: config.smtpUser,
           pass: config.smtpPass,
         },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 4000,
       });
     }
 
     return this.transporter;
+  }
+
+  private async sendMailWithSafeTimeout(
+    to: string,
+    subject: string,
+    html: string,
+    text: string
+  ): Promise<EmailDeliveryResult> {
+    const transporter = this.getTransporter();
+
+    // In test mode, skip actual network transmission to prevent test latency
+    if (process.env.NODE_ENV === 'test' || !transporter) {
+      return {
+        success: true,
+        status: 'sent',
+        messageId: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      };
+    }
+
+    try {
+      const sendPromise = transporter.sendMail({
+        from: `"${config.emailSenderName}" <${config.smtpUser}>`,
+        to,
+        subject,
+        text,
+        html,
+      });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('SMTP timeout: port 465/587 blocked by cloud host')),
+          4500
+        )
+      );
+
+      const info = (await Promise.race([sendPromise, timeoutPromise])) as any;
+      console.log(`[EmailService] Successfully sent email to ${to} (MessageId: ${info.messageId})`);
+
+      return {
+        success: true,
+        status: 'sent',
+        messageId: info.messageId,
+      };
+    } catch (err: any) {
+      console.warn(`[EmailService] SMTP delivery notice for ${to}: ${err.message}`);
+      return {
+        success: false,
+        status: 'failed',
+        error: err.message || 'SMTP transmission failed',
+      };
+    }
   }
 
   /**
@@ -49,35 +103,15 @@ export class EmailService {
       const maskedEmail = this.maskEmail(appointment.email);
       console.log(`[EmailService] Preparing confirmation for ${appointment.bookingId} to ${maskedEmail}`);
 
-      const transporter = this.getTransporter();
-
-      // In test mode, skip actual network transmission to prevent test latency
-      if (process.env.NODE_ENV === 'test' || !transporter) {
-        return {
-          success: true,
-          status: 'sent',
-          messageId: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        };
-      }
-
       const html = this.getBookingConfirmationHtml(appointment, doctor);
       const text = this.getBookingConfirmationText(appointment, doctor);
 
-      const info = await transporter.sendMail({
-        from: `"${config.emailSenderName}" <${config.smtpUser}>`,
-        to: appointment.email,
-        subject: `Appointment Confirmed — Aura Health Clinic [${appointment.bookingId}]`,
-        text,
+      return await this.sendMailWithSafeTimeout(
+        appointment.email,
+        `Appointment Confirmed — Aura Health Clinic [${appointment.bookingId}]`,
         html,
-      });
-
-      console.log(`[EmailService] Successfully sent booking confirmation to ${appointment.email} (MessageId: ${info.messageId})`);
-
-      return {
-        success: true,
-        status: 'sent',
-        messageId: info.messageId,
-      };
+        text
+      );
     } catch (err: any) {
       console.error('[EmailService] Failed to deliver booking confirmation:', err.message);
       return {
@@ -96,37 +130,26 @@ export class EmailService {
     doctor: Doctor
   ): Promise<EmailDeliveryResult> {
     try {
-      const maskedEmail = this.maskEmail(appointment.email);
-      console.log(`[EmailService] Preparing cancellation notice for ${appointment.bookingId} to ${maskedEmail}`);
-
-      const transporter = this.getTransporter();
-
-      if (process.env.NODE_ENV === 'test' || !transporter) {
+      if (!appointment.email || !appointment.email.includes('@')) {
         return {
-          success: true,
-          status: 'sent',
-          messageId: `msg_cancel_${Date.now()}`,
+          success: false,
+          status: 'failed',
+          error: 'Invalid recipient email address',
         };
       }
+
+      const maskedEmail = this.maskEmail(appointment.email);
+      console.log(`[EmailService] Preparing cancellation notice for ${appointment.bookingId} to ${maskedEmail}`);
 
       const html = this.getCancellationHtml(appointment, doctor);
       const text = this.getCancellationText(appointment, doctor);
 
-      const info = await transporter.sendMail({
-        from: `"${config.emailSenderName}" <${config.smtpUser}>`,
-        to: appointment.email,
-        subject: `Appointment Cancelled — Aura Health Clinic [${appointment.bookingId}]`,
-        text,
+      return await this.sendMailWithSafeTimeout(
+        appointment.email,
+        `Appointment Cancelled — Aura Health Clinic [${appointment.bookingId}]`,
         html,
-      });
-
-      console.log(`[EmailService] Successfully sent cancellation notice to ${appointment.email} (MessageId: ${info.messageId})`);
-
-      return {
-        success: true,
-        status: 'sent',
-        messageId: info.messageId,
-      };
+        text
+      );
     } catch (err: any) {
       console.error('[EmailService] Failed to deliver cancellation notice:', err.message);
       return {
@@ -145,37 +168,26 @@ export class EmailService {
     doctor: Doctor
   ): Promise<EmailDeliveryResult> {
     try {
-      const maskedEmail = this.maskEmail(appointment.email);
-      console.log(`[EmailService] Preparing reschedule notice for ${appointment.bookingId} to ${maskedEmail}`);
-
-      const transporter = this.getTransporter();
-
-      if (process.env.NODE_ENV === 'test' || !transporter) {
+      if (!appointment.email || !appointment.email.includes('@')) {
         return {
-          success: true,
-          status: 'sent',
-          messageId: `msg_reschedule_${Date.now()}`,
+          success: false,
+          status: 'failed',
+          error: 'Invalid recipient email address',
         };
       }
+
+      const maskedEmail = this.maskEmail(appointment.email);
+      console.log(`[EmailService] Preparing reschedule notice for ${appointment.bookingId} to ${maskedEmail}`);
 
       const html = this.getRescheduleHtml(appointment, doctor);
       const text = this.getRescheduleText(appointment, doctor);
 
-      const info = await transporter.sendMail({
-        from: `"${config.emailSenderName}" <${config.smtpUser}>`,
-        to: appointment.email,
-        subject: `Appointment Rescheduled — Aura Health Clinic [${appointment.bookingId}]`,
-        text,
+      return await this.sendMailWithSafeTimeout(
+        appointment.email,
+        `Appointment Rescheduled — Aura Health Clinic [${appointment.bookingId}]`,
         html,
-      });
-
-      console.log(`[EmailService] Successfully sent reschedule notice to ${appointment.email} (MessageId: ${info.messageId})`);
-
-      return {
-        success: true,
-        status: 'sent',
-        messageId: info.messageId,
-      };
+        text
+      );
     } catch (err: any) {
       console.error('[EmailService] Failed to deliver reschedule notice:', err.message);
       return {

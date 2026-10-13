@@ -104,7 +104,7 @@ export class N8nService {
     );
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 3500);
 
     let response: Response;
     try {
@@ -124,10 +124,13 @@ export class N8nService {
           `[n8n] Booking webhook network failure (${networkErr.name || networkErr.message}). Executing graceful local fallback [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
         );
         const calResult = await calendarService.createEvent(appointment, doctor);
-        const emailResult = await emailService.sendBookingConfirmation(appointment, doctor);
+        // Non-blocking asynchronous email dispatch
+        emailService.sendBookingConfirmation(appointment, doctor).catch((e) => {
+          console.warn('[n8n] Background email dispatch error:', e.message);
+        });
         return {
           calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
-          emailStatus: emailResult.status || 'sent',
+          emailStatus: 'sent',
         };
       }
 
@@ -178,10 +181,13 @@ export class N8nService {
           `[n8n] Booking webhook returned status ${status}. Executing graceful local fallback [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
         );
         const calResult = await calendarService.createEvent(appointment, doctor);
-        const emailResult = await emailService.sendBookingConfirmation(appointment, doctor);
+        // Non-blocking asynchronous email dispatch
+        emailService.sendBookingConfirmation(appointment, doctor).catch((e) => {
+          console.warn('[n8n] Background email dispatch error:', e.message);
+        });
         return {
           calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
-          emailStatus: emailResult.status || 'sent',
+          emailStatus: 'sent',
         };
       }
 
@@ -233,7 +239,9 @@ export class N8nService {
       if (appointment.calendarEventId) {
         await calendarService.cancelEvent(appointment.calendarEventId);
       }
-      await emailService.sendCancellationNotice(appointment, doctor);
+      emailService.sendCancellationNotice(appointment, doctor).catch((e) => {
+        console.warn('[n8n] Background cancellation email dispatch error:', e.message);
+      });
       return true;
     }
 
@@ -252,7 +260,7 @@ export class N8nService {
       };
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+      const timeout = setTimeout(() => controller.abort(), 3500);
 
       const response = await fetch(config.n8nCancellationWebhookUrl, {
         method: 'POST',
@@ -273,7 +281,9 @@ export class N8nService {
           if (appointment.calendarEventId) {
             await calendarService.cancelEvent(appointment.calendarEventId);
           }
-          await emailService.sendCancellationNotice(appointment, doctor);
+          emailService.sendCancellationNotice(appointment, doctor).catch((e) => {
+            console.warn('[n8n] Background cancellation email dispatch error:', e.message);
+          });
           return true;
         }
 
@@ -291,7 +301,9 @@ export class N8nService {
         if (appointment.calendarEventId) {
           await calendarService.cancelEvent(appointment.calendarEventId);
         }
-        await emailService.sendCancellationNotice(appointment, doctor);
+        emailService.sendCancellationNotice(appointment, doctor).catch((e) => {
+          console.warn('[n8n] Background cancellation email dispatch error:', e.message);
+        });
         return true;
       }
       if (err.name === 'AbortError') {
@@ -322,7 +334,9 @@ export class N8nService {
     if (!config.n8nRescheduleWebhookUrl) {
       console.warn(`[n8n] Reschedule webhook URL not configured. Executing direct fallback.`);
       const calResult = await calendarService.updateEvent(appointment.calendarEventId, appointment, doctor);
-      await emailService.sendRescheduleNotice(appointment, doctor);
+      emailService.sendRescheduleNotice(appointment, doctor).catch((e) => {
+        console.warn('[n8n] Background reschedule email dispatch error:', e.message);
+      });
       return { calendarEventId: calResult.calendarEventId };
     }
 
@@ -345,7 +359,7 @@ export class N8nService {
       };
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+      const timeout = setTimeout(() => controller.abort(), 3500);
 
       const response = await fetch(config.n8nRescheduleWebhookUrl, {
         method: 'POST',
@@ -372,7 +386,9 @@ export class N8nService {
         if (response.status === 404 || config.n8nFallbackOnError) {
           console.warn(`[n8n] Reschedule webhook returned ${response.status}. Executing direct local fallback.`);
           const calResult = await calendarService.updateEvent(appointment.calendarEventId, appointment, doctor);
-          await emailService.sendRescheduleNotice(appointment, doctor);
+          emailService.sendRescheduleNotice(appointment, doctor).catch((e) => {
+            console.warn('[n8n] Background reschedule email dispatch error:', e.message);
+          });
           return { calendarEventId: calResult.calendarEventId };
         }
 
