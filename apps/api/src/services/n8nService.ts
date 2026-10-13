@@ -62,6 +62,24 @@ export class N8nService {
   }
 
   /**
+   * Dispatches payload to direct Google Sheets/Gmail Apps Script webhook if configured
+   */
+  public async dispatchGoogleWebhook(payload: any): Promise<void> {
+    if (!config.googleWebhookUrl) return;
+    try {
+      console.log(`[GoogleWebhook] Dispatching action: ${payload.action} to Google Sheets & Gmail`);
+      await fetch(config.googleWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      console.log(`[GoogleWebhook] Successfully dispatched to Google Sheets.`);
+    } catch (err: any) {
+      console.warn(`[GoogleWebhook] Dispatch error:`, err.message);
+    }
+  }
+
+  /**
    * Invoke n8n Main Booking Workflow
    * Strictly requires a valid success response from n8n before confirming.
    */
@@ -128,6 +146,9 @@ export class N8nService {
         emailService.sendBookingConfirmation(appointment, doctor).catch((e) => {
           console.warn('[n8n] Background email dispatch error:', e.message);
         });
+        this.dispatchGoogleWebhook(payload).catch((e) => {
+          console.warn('[GoogleWebhook] Background Google sync error:', e.message);
+        });
         return {
           calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
           emailStatus: 'sent',
@@ -184,6 +205,9 @@ export class N8nService {
         // Non-blocking asynchronous email dispatch
         emailService.sendBookingConfirmation(appointment, doctor).catch((e) => {
           console.warn('[n8n] Background email dispatch error:', e.message);
+        });
+        this.dispatchGoogleWebhook(payload).catch((e) => {
+          console.warn('[GoogleWebhook] Background Google sync error:', e.message);
         });
         return {
           calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
@@ -245,19 +269,20 @@ export class N8nService {
       return true;
     }
 
+    const payload: N8nCancellationPayload = {
+      action: 'CANCEL_APPOINTMENT',
+      correlationId,
+      bookingId: appointment.bookingId,
+      email: appointment.email,
+      doctorId: appointment.doctorId,
+      calendarEventId: appointment.calendarEventId,
+      reason,
+    };
+
     try {
       console.log(
         `[n8n] Dispatching cancellation webhook [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
       );
-      const payload: N8nCancellationPayload = {
-        action: 'CANCEL_APPOINTMENT',
-        correlationId,
-        bookingId: appointment.bookingId,
-        email: appointment.email,
-        doctorId: appointment.doctorId,
-        calendarEventId: appointment.calendarEventId,
-        reason,
-      };
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3500);
@@ -304,6 +329,9 @@ export class N8nService {
         emailService.sendCancellationNotice(appointment, doctor).catch((e) => {
           console.warn('[n8n] Background cancellation email dispatch error:', e.message);
         });
+        this.dispatchGoogleWebhook(payload).catch((e) => {
+          console.warn('[GoogleWebhook] Background Google sync error:', e.message);
+        });
         return true;
       }
       if (err.name === 'AbortError') {
@@ -340,23 +368,24 @@ export class N8nService {
       return { calendarEventId: calResult.calendarEventId };
     }
 
+    const payload: N8nReschedulePayload = {
+      action: 'RESCHEDULE_APPOINTMENT',
+      correlationId,
+      bookingId: appointment.bookingId,
+      email: appointment.email,
+      doctorId: appointment.doctorId,
+      calendarEventId: appointment.calendarEventId,
+      newAppointmentDate: newDate,
+      newAppointmentTime: newTime,
+      newDate,
+      newTime,
+      newEndTime,
+    };
+
     try {
       console.log(
         `[n8n] Dispatching reschedule webhook [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}]`
       );
-      const payload: N8nReschedulePayload = {
-        action: 'RESCHEDULE_APPOINTMENT',
-        correlationId,
-        bookingId: appointment.bookingId,
-        email: appointment.email,
-        doctorId: appointment.doctorId,
-        calendarEventId: appointment.calendarEventId,
-        newAppointmentDate: newDate,
-        newAppointmentTime: newTime,
-        newDate,
-        newTime,
-        newEndTime,
-      };
 
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3500);
@@ -388,6 +417,9 @@ export class N8nService {
           const calResult = await calendarService.updateEvent(appointment.calendarEventId, appointment, doctor);
           emailService.sendRescheduleNotice(appointment, doctor).catch((e) => {
             console.warn('[n8n] Background reschedule email dispatch error:', e.message);
+          });
+          this.dispatchGoogleWebhook(payload).catch((e) => {
+            console.warn('[GoogleWebhook] Background Google sync error:', e.message);
           });
           return { calendarEventId: calResult.calendarEventId };
         }

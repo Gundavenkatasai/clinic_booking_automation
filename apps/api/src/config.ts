@@ -19,6 +19,7 @@ export const config = {
   calendarName: process.env.GOOGLE_CALENDAR_NAME || 'Clinic Appointments',
   googleSheetsDocumentId: process.env.GOOGLE_SHEETS_DOCUMENT_ID || '',
   googleCalendarId: process.env.GOOGLE_CALENDAR_ID || '',
+  googleWebhookUrl: process.env.GOOGLE_WEBHOOK_URL || '',
 
   // n8n Webhook URLs & Security Token
   n8nBookingWebhookUrl: process.env.N8N_BOOKING_WEBHOOK_URL || '',
