@@ -36,6 +36,12 @@ services:
         value: https://aura-clinic-n8n.onrender.com/webhook/clinic-reschedule
       - key: N8N_FALLBACK_ON_ERROR
         value: "true"
+      - key: SMTP_USER
+        value: venkatasaigunda82@gmail.com
+      - key: SMTP_PASS
+        value: kjciunrznuuhvopt
+      - key: EMAIL_SENDER_NAME
+        value: "Aura Health Clinic"
 
   - type: web
     name: aura-clinic-n8n

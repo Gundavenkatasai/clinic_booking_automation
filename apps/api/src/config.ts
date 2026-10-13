@@ -33,4 +33,9 @@ export const config = {
   // Admin bootstrap credentials (used for first admin creation in dev/production)
   adminUsername: process.env.ADMIN_USERNAME || 'admin@auraclinic.com',
   adminPassword: process.env.ADMIN_PASSWORD || 'AuraClinicAdmin2026!',
+
+  // SMTP Gmail Configuration
+  smtpUser: process.env.SMTP_USER || 'venkatasaigunda82@gmail.com',
+  smtpPass: (process.env.SMTP_PASS || 'kjciunrznuuhvopt').replace(/\s+/g, ''),
+  emailSenderName: process.env.EMAIL_SENDER_NAME || 'Aura Health Clinic',
 };
