@@ -286,6 +286,41 @@
       "createdAt": "2026-10-13T07:29:35.265Z",
       "verificationToken": "tok_59c70b63815a389ce0776f5a57415d60",
       "reasonForVisit": "LinkedIn Demo Consultation"
+    },
+    {
+      "bookingId": "APT-675986-6D24",
+      "patientName": "sai g",
+      "email": "venkatasaigunda82@gmail.com",
+      "phone": "9963039884",
+      "doctorId": "DOC-101",
+      "appointmentDate": "2026-10-14",
+      "appointmentTime": "12:30",
+      "endTime": "13:00",
+      "status": "confirmed",
+      "calendarEventId": "gcal_1791876675986_181fb723",
+      "emailStatus": "sent",
+      "whatsappStatus": "not_configured",
+      "reminderSent": false,
+      "createdAt": "2026-10-13T07:31:15.986Z",
+      "verificationToken": "tok_22b9d71385bb18bbae4e5ec0fdccae00"
+    },
+    {
+      "bookingId": "APT-067922-8910",
+      "patientName": "Sai LinkedIn Test",
+      "email": "venkatasaigunda82@gmail.com",
+      "phone": "+919963039884",
+      "doctorId": "DOC-101",
+      "appointmentDate": "2026-10-14",
+      "appointmentTime": "09:30",
+      "endTime": "10:00",
+      "status": "confirmed",
+      "calendarEventId": "gcal_1791877071023_58599765",
+      "emailStatus": "sent",
+      "whatsappStatus": "not_configured",
+      "reminderSent": false,
+      "createdAt": "2026-10-13T07:37:47.922Z",
+      "verificationToken": "tok_c97e96380240f3148007607cb4a6d053",
+      "reasonForVisit": "Testing n8n workflow integration"
     }
   ]
 }
