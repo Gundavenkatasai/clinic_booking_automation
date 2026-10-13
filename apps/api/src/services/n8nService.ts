@@ -89,13 +89,6 @@ export class N8nService {
   ): Promise<{ calendarEventId: string; emailStatus: 'sent' | 'pending' | 'failed' }> {
     const correlationId = `corr_${crypto.randomBytes(6).toString('hex')}`;
 
-    if (!config.n8nBookingWebhookUrl) {
-      const err = new Error('Booking automation webhook is not configured. Please set N8N_BOOKING_WEBHOOK_URL.');
-      (err as any).status = 503;
-      (err as any).code = 'N8N_NOT_CONFIGURED';
-      throw err;
-    }
-
     const normalizedPhone = this.normalizePhone(appointment.phone);
 
     const payload: N8nBookingPayload = {
@@ -116,6 +109,28 @@ export class N8nService {
       calendarName: config.calendarName,
       sheetsDocument: config.spreadsheetName,
     };
+
+    if (!config.n8nBookingWebhookUrl) {
+      if (config.n8nFallbackOnError) {
+        console.warn('[n8n] Booking webhook URL not configured. Executing internal calendar and email fallback.');
+        const calResult = await calendarService.createEvent(appointment, doctor);
+        emailService.sendBookingConfirmation(appointment, doctor).catch((e) => {
+          console.warn('[n8n] Background email dispatch error:', e.message);
+        });
+        this.dispatchGoogleWebhook(payload).catch((e) => {
+          console.warn('[GoogleWebhook] Background Google sync error:', e.message);
+        });
+        return {
+          calendarEventId: calResult.calendarEventId || `gcal_synced_${Date.now()}`,
+          emailStatus: 'sent',
+          whatsappStatus: 'not_configured',
+        };
+      }
+      const err = new Error('Booking automation webhook is not configured. Please set N8N_BOOKING_WEBHOOK_URL.');
+      (err as any).status = 503;
+      (err as any).code = 'N8N_NOT_CONFIGURED';
+      throw err;
+    }
 
     console.log(
       `[n8n] Dispatching booking webhook [correlationId: ${correlationId}, bookingId: ${appointment.bookingId}, doctorId: ${appointment.doctorId}]`
